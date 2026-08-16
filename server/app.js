@@ -21,61 +21,129 @@ const app = express();
 // Connect to database
 connectDB();
 
-// Security middleware
+// ============================================================
+// SECURITY MIDDLEWARE
+// ============================================================
+
 app.use(helmet());
 
-// CORS configuration
+// ============================================================
+// CORS CONFIGURATION
+// ============================================================
+
 const allowedOrigins = [
+  // Local development
   'http://localhost:5173',
   'http://localhost:5174',
   'http://localhost:5175',
   'http://localhost:5176',
+
+  // Production frontend
+  'https://smart-seat-liard.vercel.app',
+
+  // Render environment variable
   process.env.CLIENT_URL
-].filter(Boolean); // Remove undefined/null values
+].filter(Boolean);
 
-app.use(cors({
+const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
+    // Allow requests without an Origin header
+    // Examples: Postman, curl, server-to-server requests
+    if (!origin) {
+      return callback(null, true);
     }
-  },
-  credentials: true
-}));
 
-// Body parser
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    console.warn(`CORS blocked origin: ${origin}`);
+
+    return callback(
+      new Error(`Not allowed by CORS: ${origin}`)
+    );
+  },
+
+  credentials: true,
+
+  methods: [
+    'GET',
+    'POST',
+    'PUT',
+    'PATCH',
+    'DELETE',
+    'OPTIONS'
+  ],
+
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization'
+  ],
+
+  optionsSuccessStatus: 204
+};
+
+// Apply CORS to all requests
+app.use(cors(corsOptions));
+
+// Explicitly handle browser preflight requests
+app.options('*', cors(corsOptions));
+
+// ============================================================
+// BODY PARSER
+// ============================================================
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Rate limiting
+// ============================================================
+// RATE LIMITING
+// ============================================================
+
 const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
-  message: 'Too many requests from this IP, please try again later.'
+  windowMs:
+    parseInt(process.env.RATE_LIMIT_WINDOW_MS) ||
+    15 * 60 * 1000,
+
+  max:
+    parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) ||
+    100,
+
+  message:
+    'Too many requests from this IP, please try again later.'
 });
+
 app.use('/api/', limiter);
 
-// Stricter rate limiting for auth (disabled for integration testing)
+// ============================================================
+// AUTH RATE LIMITING
+// ============================================================
+
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100, // Increased for testing
-  message: 'Too many authentication attempts, please try again later.'
+  max: 100,
+  message:
+    'Too many authentication attempts, please try again later.'
 });
-// app.use('/api/auth/login', authLimiter); // Disabled for testing
-// app.use('/api/auth/register', authLimiter); // Disabled for testing
 
-// Logging
+// Disabled during integration testing
+// app.use('/api/auth/login', authLimiter);
+// app.use('/api/auth/register', authLimiter);
+
+// ============================================================
+// LOGGING
+// ============================================================
+
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 } else {
   app.use(morgan('combined'));
 }
 
-// Health check
+// ============================================================
+// HEALTH CHECK
+// ============================================================
+
 app.get('/api/health', (req, res) => {
   res.status(200).json({
     success: true,
@@ -84,24 +152,43 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// API routes
+// ============================================================
+// API ROUTES
+// ============================================================
+
 app.use('/api/auth', authRoutes);
+
 app.use('/api/buses', busRoutes);
+
 app.use('/api/schedules', scheduleRoutes);
+
 app.use('/api/bookings', bookingRoutes);
+
 app.use('/api/notifications', notificationRoutes);
+
 app.use('/api/admin', adminRoutes);
+
 app.use('/api/users', userRoutes);
 
-// Error handling middleware
+// ============================================================
+// ERROR HANDLING
+// ============================================================
+
 app.use(errorHandler);
 
-// 404 handler
+// ============================================================
+// 404 HANDLER
+// ============================================================
+
 app.use((req, res) => {
   res.status(404).json({
     success: false,
     message: 'Route not found'
   });
 });
+
+// ============================================================
+// EXPORT APP
+// ============================================================
 
 module.exports = app;
