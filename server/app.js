@@ -4,7 +4,6 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const morgan = require('morgan');
 const connectDB = require('./config/database');
-const socketService = require('./sockets/socketService');
 const errorHandler = require('./middleware/errorHandler');
 
 // Route imports
@@ -18,17 +17,20 @@ const userRoutes = require('./routes/users');
 
 const app = express();
 
-// Connect to database
+// ============================================================
+// DATABASE
+// ============================================================
+
 connectDB();
 
 // ============================================================
-// SECURITY MIDDLEWARE
+// SECURITY
 // ============================================================
 
 app.use(helmet());
 
 // ============================================================
-// CORS CONFIGURATION
+// CORS
 // ============================================================
 
 const allowedOrigins = [
@@ -38,17 +40,19 @@ const allowedOrigins = [
   'http://localhost:5175',
   'http://localhost:5176',
 
-  // Production frontend
+  // Production Vercel frontend
   'https://smart-seat-liard.vercel.app',
 
   // Render environment variable
-  process.env.CLIENT_URL
+  process.env.CLIENT_URL,
+
+  // Socket.IO environment variable
+  process.env.SOCKET_CORS_ORIGIN
 ].filter(Boolean);
 
 const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests without an Origin header
-    // Examples: Postman, curl, server-to-server requests
     if (!origin) {
       return callback(null, true);
     }
@@ -83,10 +87,9 @@ const corsOptions = {
   optionsSuccessStatus: 204
 };
 
-// Apply CORS to all requests
 app.use(cors(corsOptions));
 
-// Explicitly handle browser preflight requests
+// Explicit browser preflight handling
 app.options('*', cors(corsOptions));
 
 // ============================================================
@@ -109,8 +112,10 @@ const limiter = rateLimit({
     parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) ||
     100,
 
-  message:
-    'Too many requests from this IP, please try again later.'
+  message: {
+    success: false,
+    message: 'Too many requests from this IP, please try again later.'
+  }
 });
 
 app.use('/api/', limiter);
@@ -122,8 +127,11 @@ app.use('/api/', limiter);
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
-  message:
-    'Too many authentication attempts, please try again later.'
+
+  message: {
+    success: false,
+    message: 'Too many authentication attempts, please try again later.'
+  }
 });
 
 // Disabled during integration testing
@@ -157,24 +165,12 @@ app.get('/api/health', (req, res) => {
 // ============================================================
 
 app.use('/api/auth', authRoutes);
-
 app.use('/api/buses', busRoutes);
-
 app.use('/api/schedules', scheduleRoutes);
-
 app.use('/api/bookings', bookingRoutes);
-
 app.use('/api/notifications', notificationRoutes);
-
 app.use('/api/admin', adminRoutes);
-
 app.use('/api/users', userRoutes);
-
-// ============================================================
-// ERROR HANDLING
-// ============================================================
-
-app.use(errorHandler);
 
 // ============================================================
 // 404 HANDLER
@@ -188,7 +184,13 @@ app.use((req, res) => {
 });
 
 // ============================================================
-// EXPORT APP
+// ERROR HANDLER
+// ============================================================
+
+app.use(errorHandler);
+
+// ============================================================
+// EXPORT
 // ============================================================
 
 module.exports = app;
