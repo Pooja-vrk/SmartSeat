@@ -2,117 +2,332 @@
 import api from './api';
 
 export const busService = {
-  // Search buses
-  searchBuses: async (searchParams) => {
+  // ==========================================================
+  // SEARCH BUSES
+  // ==========================================================
+
+  searchBuses: async (searchParams = {}) => {
     try {
-      const response = await api.get('/buses/search', { params: searchParams });
+      const response = await api.get(
+        '/buses/search',
+        {
+          params: searchParams
+        }
+      );
+
       return response;
     } catch (error) {
-      throw error.response?.data || { success: false, message: 'Failed to search buses' };
+      throw (
+        error.response?.data || {
+          success: false,
+          message: 'Failed to search buses'
+        }
+      );
     }
   },
 
-  // Get bus details
+  // ==========================================================
+  // GET BUS DETAILS
+  // ==========================================================
+
   getBus: async (busId) => {
     try {
-      const response = await api.get(`/buses/${busId}`);
-      return response;
-    } catch (error) {
-      throw error.response?.data || { success: false, message: 'Failed to get bus details' };
-    }
-  },
-
-  // Get seat layout
-  getSeats: async (busId, scheduleId) => {
-    try {
-      const response = await api.get(`/buses/${busId}/seats`, { params: { scheduleId } });
-      return response;
-    } catch (error) {
-      throw error.response?.data || { success: false, message: 'Failed to get seat layout' };
-    }
-  },
-
-  // Get adjacent seat info
-  getAdjacentSeat: async (busId, seatNumber) => {
-    try {
-      // This will be calculated from the seat layout on the frontend
-      // or we can add a backend endpoint for this
-      const response = await api.get(`/buses/${busId}/seats`);
-      const seatLayout = response.data;
-      const seat = seatLayout.find(s => s.seatNumber === seatNumber);
-      
-      if (seat && seat.adjacentSeat) {
-        const adjacentSeat = seatLayout.find(s => s.seatNumber === seat.adjacentSeat);
+      if (!busId) {
         return {
-          success: true,
-          data: {
-            adjacentSeatNumber: seat.adjacentSeat,
-            adjacentSeatStatus: adjacentSeat ? adjacentSeat.type : 'unknown'
-          }
+          success: false,
+          message: 'Bus ID is required'
         };
       }
-      
-      return { success: true, data: null };
+
+      const response = await api.get(
+        `/buses/${busId}`
+      );
+
+      return response;
     } catch (error) {
-      throw error.response?.data || { success: false, message: 'Failed to get adjacent seat info' };
+      throw (
+        error.response?.data || {
+          success: false,
+          message: 'Failed to get bus details'
+        }
+      );
     }
   },
 
-  // Filter buses (client-side filtering for now)
-  filterBuses: async (buses, filters) => {
-    let filtered = [...buses];
-    
-    if (filters.busType && filters.busType.length > 0) {
-      filtered = filtered.filter(bus => 
-        filters.busType.includes(bus.busType)
-      );
-    }
-    
-    if (filters.acType) {
-      filtered = filtered.filter(bus => 
-        filters.acType === 'ac' ? bus.busType.includes('AC') : 
-        !bus.busType.includes('AC')
-      );
-    }
-    
-    if (filters.seatType) {
-      filtered = filtered.filter(bus => 
-        filters.seatType === 'sleeper' ? bus.busType.includes('Sleeper') : 
-        !bus.busType.includes('Sleeper')
-      );
-    }
-    
-    if (filters.minPrice) {
-      filtered = filtered.filter(bus => bus.fare >= filters.minPrice);
-    }
-    
-    if (filters.maxPrice) {
-      filtered = filtered.filter(bus => bus.fare <= filters.maxPrice);
-    }
-    
-    if (filters.minSeats) {
-      filtered = filtered.filter(bus => bus.availableSeats >= filters.minSeats);
-    }
-    
-    return { success: true, data: filtered };
-  },
+  // ==========================================================
+  // GET REAL SEAT LAYOUT
+  // ==========================================================
 
-  // Sort buses (client-side sorting)
-  sortBuses: async (buses, sortBy) => {
-    const sorted = [...buses].sort((a, b) => {
-      switch (sortBy) {
-        case 'price':
-          return a.fare - b.fare;
-        case 'departure':
-          return new Date(a.schedule.departure) - new Date(b.schedule.departure);
-        case 'duration':
-          return a.schedule.duration.localeCompare(b.schedule.duration);
-        case 'rating':
-          return b.rating - a.rating;
-        default:
-          return 0;
+  getSeats: async (
+    busId,
+    scheduleId
+  ) => {
+    try {
+      if (!busId) {
+        return {
+          success: false,
+          message: 'Bus ID is required'
+        };
       }
-    });
-    return { success: true, data: sorted };
+
+      if (!scheduleId) {
+        return {
+          success: false,
+          message: 'Schedule ID is required'
+        };
+      }
+
+      const response = await api.get(
+        `/buses/${busId}/seats`,
+        {
+          params: {
+            scheduleId
+          }
+        }
+      );
+
+      return {
+        success: true,
+        data: Array.isArray(response?.data)
+          ? response.data
+          : []
+      };
+    } catch (error) {
+      console.error(
+        'Failed to load seat layout:',
+        error
+      );
+
+      throw (
+        error.response?.data || {
+          success: false,
+          message: 'Failed to get seat layout'
+        }
+      );
+    }
+  },
+
+  // ==========================================================
+  // GET ADJACENT SEAT
+  // ==========================================================
+
+  getAdjacentSeat: async (
+    busId,
+    scheduleId,
+    seatNumber
+  ) => {
+    try {
+      if (!busId) {
+        return {
+          success: false,
+          message: 'Bus ID is required'
+        };
+      }
+
+      if (!scheduleId) {
+        return {
+          success: false,
+          message: 'Schedule ID is required'
+        };
+      }
+
+      if (!seatNumber) {
+        return {
+          success: false,
+          message: 'Seat number is required'
+        };
+      }
+
+      const response = await api.get(
+        `/buses/${busId}/seats`,
+        {
+          params: {
+            scheduleId
+          }
+        }
+      );
+
+      const seats = Array.isArray(response?.data)
+        ? response.data
+        : [];
+
+      const seat = seats.find(
+        (item) =>
+          item.seatNumber === seatNumber
+      );
+
+      if (!seat?.adjacentSeat) {
+        return {
+          success: true,
+          data: null
+        };
+      }
+
+      const adjacentSeat = seats.find(
+        (item) =>
+          item.seatNumber ===
+          seat.adjacentSeat
+      );
+
+      return {
+        success: true,
+        data: {
+          adjacentSeatNumber:
+            seat.adjacentSeat,
+
+          adjacentSeatStatus:
+            adjacentSeat?.type || 'unknown'
+        }
+      };
+    } catch (error) {
+      throw (
+        error.response?.data || {
+          success: false,
+          message:
+            'Failed to get adjacent seat information'
+        }
+      );
+    }
+  },
+
+  // ==========================================================
+  // FILTER BUSES
+  // ==========================================================
+
+  filterBuses: async (
+    buses = [],
+    filters = {}
+  ) => {
+    let filtered = [...buses];
+
+    if (
+      Array.isArray(filters.busType) &&
+      filters.busType.length > 0
+    ) {
+      filtered = filtered.filter(
+        (bus) =>
+          filters.busType.includes(
+            bus.busType
+          )
+      );
+    }
+
+    if (filters.acType) {
+      filtered = filtered.filter((bus) => {
+        const type =
+          bus.busType?.toUpperCase() || '';
+
+        return filters.acType === 'ac'
+          ? type.includes('AC')
+          : !type.includes('AC');
+      });
+    }
+
+    if (filters.seatType) {
+      filtered = filtered.filter((bus) => {
+        const type =
+          bus.busType?.toUpperCase() || '';
+
+        return filters.seatType === 'sleeper'
+          ? type.includes('SLEEPER')
+          : !type.includes('SLEEPER');
+      });
+    }
+
+    if (
+      filters.minPrice !== '' &&
+      filters.minPrice !== undefined
+    ) {
+      filtered = filtered.filter(
+        (bus) =>
+          Number(bus.fare) >=
+          Number(filters.minPrice)
+      );
+    }
+
+    if (
+      filters.maxPrice !== '' &&
+      filters.maxPrice !== undefined
+    ) {
+      filtered = filtered.filter(
+        (bus) =>
+          Number(bus.fare) <=
+          Number(filters.maxPrice)
+      );
+    }
+
+    if (
+      filters.minSeats !== '' &&
+      filters.minSeats !== undefined
+    ) {
+      filtered = filtered.filter(
+        (bus) =>
+          Number(bus.availableSeats) >=
+          Number(filters.minSeats)
+      );
+    }
+
+    return {
+      success: true,
+      data: filtered
+    };
+  },
+
+  // ==========================================================
+  // SORT BUSES
+  // ==========================================================
+
+  sortBuses: async (
+    buses = [],
+    sortBy
+  ) => {
+    const sorted = [...buses].sort(
+      (a, b) => {
+        switch (sortBy) {
+          case 'price':
+            return (
+              Number(a.fare || 0) -
+              Number(b.fare || 0)
+            );
+
+          case 'departure':
+            return (
+              new Date(
+                a.schedule?.departure || 0
+              ) -
+              new Date(
+                b.schedule?.departure || 0
+              )
+            );
+
+          case 'rating':
+            return (
+              Number(b.rating || 0) -
+              Number(a.rating || 0)
+            );
+
+          case 'duration':
+            return String(
+              a.schedule?.duration ||
+                a.route?.estimatedDuration ||
+                ''
+            ).localeCompare(
+              String(
+                b.schedule?.duration ||
+                  b.route?.estimatedDuration ||
+                  ''
+              )
+            );
+
+          default:
+            return 0;
+        }
+      }
+    );
+
+    return {
+      success: true,
+      data: sorted
+    };
   }
 };

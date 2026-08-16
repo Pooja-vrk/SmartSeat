@@ -1,5 +1,8 @@
 const express = require('express');
-const router = express.Router();
+
+const router =
+  express.Router();
+
 const {
   searchBuses,
   getBus,
@@ -7,9 +10,33 @@ const {
   getRoutes
 } = require('../controllers/busController');
 
-router.get('/search', searchBuses);
-router.get('/:id', getBus);
-router.get('/:id/seats', getBusSeats);
-router.get('/routes', getRoutes);
+// ============================================================
+// IMPORTANT
+// Static routes must be registered before /:id
+// ============================================================
+
+// GET /api/buses/routes
+router.get(
+  '/routes',
+  getRoutes
+);
+
+// GET /api/buses/search
+router.get(
+  '/search',
+  searchBuses
+);
+
+// GET /api/buses/:id/seats?scheduleId=...
+router.get(
+  '/:id/seats',
+  getBusSeats
+);
+
+// GET /api/buses/:id
+router.get(
+  '/:id',
+  getBus
+);
 
 module.exports = router;
