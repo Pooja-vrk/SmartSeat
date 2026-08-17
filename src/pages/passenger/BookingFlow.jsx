@@ -1,30 +1,19 @@
-// Booking flow page
-// Handles seat selection -> passenger details -> payment -> ticket
+// BookingFlow.jsx
+// SmartSeat booking flow
+// Seat Selection -> Passenger Details -> Payment -> Ticket
 
-import {
-  useEffect,
-  useState
-} from 'react';
-
-import {
-  useNavigate,
-  useParams
-} from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 
 import {
   Card,
   CardBody,
   Button,
-  Loading
+  Loading,
 } from '../../components/common';
 
-import {
-  useBooking
-} from '../../context/BookingContext';
-
-import {
-  useSmartSeat
-} from '../../context/SmartSeatContext';
+import { useBooking } from '../../context/BookingContext';
+import { useSmartSeat } from '../../context/SmartSeatContext';
 
 import SeatSelection from '../../components/seat/SeatSelection';
 import SmartSeatPanel from '../../components/seat/SmartSeatPanel';
@@ -39,12 +28,7 @@ import { bookingService } from '../../services/bookingService';
 import { recommendationService } from '../../services/recommendationService';
 
 const BookingFlow = () => {
-  const {
-    busId,
-    scheduleId,
-    id
-  } = useParams();
-
+  const { busId, busID, scheduleId, id } = useParams();
   const navigate = useNavigate();
 
   const {
@@ -52,179 +36,336 @@ const BookingFlow = () => {
     selectedSeat,
     selectSeat,
     selectBus,
-    clearBooking
+    clearBooking,
   } = useBooking();
 
   const {
     isMonitoringEnabled,
-    setSeatMonitoring
+    setSeatMonitoring,
   } = useSmartSeat();
 
   const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(true);
 
-  const [loading, setLoading] =
-    useState(true);
+  const [seatLayout, setSeatLayout] = useState([]);
+  const [adjacentSeatInfo, setAdjacentSeatInfo] = useState(null);
 
-  const [seatLayout, setSeatLayout] =
-    useState([]);
+  const [passengerDetails, setPassengerDetails] = useState(null);
+  const [bookingResult, setBookingResult] = useState(null);
 
-  const [adjacentSeatInfo, setAdjacentSeatInfo] =
-    useState(null);
-
-  const [passengerDetails, setPassengerDetails] =
-    useState(null);
-
-  const [bookingResult, setBookingResult] =
-    useState(null);
-
-  const [recommendations, setRecommendations] =
-    useState([]);
-
-  const [errorMessage, setErrorMessage] =
-    useState('');
+  const [recommendations, setRecommendations] = useState([]);
+  const [errorMessage, setErrorMessage] = useState('');
 
   // ==========================================================
-  // IDS
+  // ROUTE IDS
   // ==========================================================
 
-  const actualScheduleId =
-    scheduleId || id;
+  const routeBusId = busId || busID || null;
 
-  const actualBusId =
-    busId ||
+  const routeScheduleId = scheduleId || id || null;
+
+  // ==========================================================
+  // CONTEXT IDS
+  // ==========================================================
+
+  const contextScheduleId =
+    selectedBus?.scheduleId ||
+    selectedBus?.schedule?._id ||
+    null;
+
+  const contextBusId =
     selectedBus?.busId ||
     selectedBus?._id ||
-    selectedBus?.id;
+    selectedBus?.id ||
+    null;
 
   // ==========================================================
-  // LOAD SCHEDULE + BUS + REAL SEATS
+  // INITIAL IDs
+  // ==========================================================
+
+  const initialScheduleId =
+    routeScheduleId || contextScheduleId;
+
+  const initialBusId =
+    routeBusId || contextBusId;
+
+  // ==========================================================
+  // LOAD BOOKING DATA
   // ==========================================================
 
   useEffect(() => {
     let cancelled = false;
 
-    const loadBookingData = async () => {
-      if (!actualScheduleId) {
-        setLoading(false);
-        setErrorMessage(
-          'Schedule ID is missing.'
+    const loadSchedule = async (scheduleIdToLoad) => {
+      console.log(
+        '[SmartSeat] Loading schedule:',
+        scheduleIdToLoad
+      );
+
+      const response = await api.get(
+        `/schedules/${scheduleIdToLoad}`
+      );
+
+      if (
+        !response?.success ||
+        !response?.data
+      ) {
+        const error = new Error(
+          response?.message ||
+            'Schedule information could not be loaded.'
         );
-        return;
+
+        error.response = {
+          status: 404,
+          data: response,
+        };
+
+        throw error;
       }
 
-      setLoading(true);
-      setErrorMessage('');
+      return response.data;
+    };
 
-      // Reset stale seat state when entering
-      // a new booking flow.
-      selectSeat(null);
-      setAdjacentSeatInfo(null);
-      setRecommendations([]);
-
-      try {
-        // ------------------------------------------------------
-        // 1. GET SCHEDULE
-        // ------------------------------------------------------
-
-        const scheduleResponse =
-          await api.get(
-            `/schedules/${actualScheduleId}`
-          );
-
-        if (
-          !scheduleResponse?.success ||
-          !scheduleResponse?.data
-        ) {
-          throw new Error(
-            scheduleResponse?.message ||
-              'Schedule could not be loaded.'
+    const loadBookingData = async () => {
+      if (!initialScheduleId) {
+        if (!cancelled) {
+          setLoading(false);
+          setErrorMessage(
+            'Schedule ID is missing. Please return to Search Buses and select a bus again.'
           );
         }
 
-        const scheduleData =
-          scheduleResponse.data;
+        return;
+      }
 
-        // ------------------------------------------------------
-        // 2. GET BUS ID FROM SCHEDULE
-        // ------------------------------------------------------
+      try {
+        if (!cancelled) {
+          setLoading(true);
+          setErrorMessage('');
+          setSeatLayout([]);
+          setAdjacentSeatInfo(null);
+          setRecommendations([]);
+
+          // Clear old selected seat.
+          selectSeat(null);
+        }
+
+        console.log('====================================');
+        console.log('[SmartSeat] BOOKING FLOW');
+        console.log('Route schedule ID:', routeScheduleId);
+        console.log('Context schedule ID:', contextScheduleId);
+        console.log('Initial schedule ID:', initialScheduleId);
+        console.log('Route bus ID:', routeBusId);
+        console.log('Context bus ID:', contextBusId);
+        console.log('====================================');
+
+        // ======================================================
+        // 1. LOAD SCHEDULE
+        // ======================================================
+
+        let scheduleData = null;
+        let resolvedScheduleId = initialScheduleId;
+
+        try {
+          scheduleData = await loadSchedule(
+            initialScheduleId
+          );
+        } catch (firstError) {
+          const status =
+            firstError?.response?.status;
+
+          console.warn(
+            '[SmartSeat] First schedule request failed:',
+            {
+              scheduleId: initialScheduleId,
+              status,
+              message: firstError?.message,
+            }
+          );
+
+          // ====================================================
+          // IMPORTANT FALLBACK
+          //
+          // If URL contains an old/deleted schedule but
+          // BookingContext contains the valid schedule,
+          // automatically try the context schedule.
+          // ====================================================
+
+          if (
+            status === 404 &&
+            contextScheduleId &&
+            contextScheduleId !== initialScheduleId
+          ) {
+            console.log(
+              '[SmartSeat] URL schedule is stale.'
+            );
+
+            console.log(
+              '[SmartSeat] Trying context schedule:',
+              contextScheduleId
+            );
+
+            scheduleData = await loadSchedule(
+              contextScheduleId
+            );
+
+            resolvedScheduleId =
+              contextScheduleId;
+          } else {
+            throw firstError;
+          }
+        }
+
+        if (cancelled) {
+          return;
+        }
+
+        console.log(
+          '[SmartSeat] Schedule loaded:',
+          scheduleData
+        );
+
+        // ======================================================
+        // 2. RESOLVE BUS FROM SCHEDULE
+        // ======================================================
+
+        const populatedBus =
+          scheduleData?.busId &&
+          typeof scheduleData.busId === 'object'
+            ? scheduleData.busId
+            : null;
 
         const scheduleBusId =
-          scheduleData?.busId?._id ||
-          scheduleData?.busId;
+          populatedBus?._id ||
+          (
+            typeof scheduleData?.busId === 'string'
+              ? scheduleData.busId
+              : null
+          ) ||
+          routeBusId ||
+          contextBusId ||
+          null;
 
-        const resolvedBusId =
-          actualBusId || scheduleBusId;
+        console.log(
+          '[SmartSeat] Resolved bus:',
+          {
+            scheduleBusId,
+            populatedBus,
+          }
+        );
 
-        if (!resolvedBusId) {
+        if (!scheduleBusId) {
           throw new Error(
             'Bus information is missing from this schedule.'
           );
         }
 
-        // ------------------------------------------------------
-        // 3. GET BUS DETAILS
-        // ------------------------------------------------------
+        // ======================================================
+        // 3. USE POPULATED BUS
+        //
+        // Do NOT call:
+        // busService.getBus(scheduleBusId)
+        //
+        // Your schedule API already gives the full bus object.
+        // ======================================================
 
-        const busResponse =
-          await busService.getBus(
-            resolvedBusId
-          );
+        let busData = populatedBus;
 
-        if (
-          !busResponse?.success ||
-          !busResponse?.data
-        ) {
+        // Fallback to existing BookingContext bus.
+        if (!busData && selectedBus) {
+          busData = selectedBus;
+        }
+
+        if (!busData) {
           throw new Error(
-            busResponse?.message ||
-              'Bus details could not be loaded.'
+            'Bus details are not available.'
           );
         }
 
-        const busData =
-          busResponse.data;
-
-        // ------------------------------------------------------
-        // 4. BUILD BOOKING BUS OBJECT
-        // ------------------------------------------------------
+        // ======================================================
+        // 4. BUILD BOOKING BUS
+        // ======================================================
 
         const bookingBus = {
           ...busData,
 
-          _id: resolvedBusId,
-          id: resolvedBusId,
-          busId: resolvedBusId,
+          _id:
+            busData._id ||
+            scheduleBusId,
+
+          id:
+            busData._id ||
+            scheduleBusId,
+
+          busId:
+            busData._id ||
+            scheduleBusId,
 
           scheduleId:
-            actualScheduleId,
+            resolvedScheduleId,
 
-          schedule: scheduleData,
+          schedule:
+            scheduleData,
 
           route:
-            scheduleData.routeId,
+            scheduleData?.routeId || null,
+
+          routeId:
+            scheduleData?.routeId || null,
 
           travelDate:
-            scheduleData.travelDate,
+            scheduleData?.travelDate || null,
+
+          departureTime:
+            scheduleData?.departureTime || null,
+
+          arrivalTime:
+            scheduleData?.arrivalTime || null,
 
           availableSeats:
-            scheduleData.availableSeats,
+            scheduleData?.availableSeats ?? 0,
 
           fare:
-            scheduleData.fare
+            scheduleData?.fare ??
+            busData?.fare ??
+            0,
         };
+
+        console.log(
+          '[SmartSeat] Booking bus:',
+          bookingBus
+        );
 
         if (!cancelled) {
           selectBus(bookingBus);
         }
 
-        // ------------------------------------------------------
-        // 5. GET REAL SEATS
-        // ------------------------------------------------------
+        // ======================================================
+        // 5. LOAD REAL SEATS
+        // ======================================================
+
+        console.log(
+          '[SmartSeat] Loading seats:',
+          {
+            busId: scheduleBusId,
+            scheduleId: resolvedScheduleId,
+          }
+        );
 
         const seatsResponse =
           await busService.getSeats(
-            resolvedBusId,
-            actualScheduleId
+            scheduleBusId,
+            resolvedScheduleId
           );
+
+        if (cancelled) {
+          return;
+        }
+
+        console.log(
+          '[SmartSeat] Real seat API response:',
+          seatsResponse
+        );
 
         if (
           !seatsResponse?.success
@@ -235,53 +376,84 @@ const BookingFlow = () => {
           );
         }
 
-        const seats =
+        // ======================================================
+        // 6. NORMALIZE SEATS
+        // ======================================================
+
+        let seats = [];
+
+        if (
           Array.isArray(
-            seatsResponse.data
+            seatsResponse?.data
           )
-            ? seatsResponse.data
-            : [];
-
-        if (!cancelled) {
-          setSeatLayout(seats);
-
-          if (seats.length === 0) {
-            setErrorMessage(
-              'No seats were found for this schedule.'
-            );
-          }
+        ) {
+          seats =
+            seatsResponse.data;
+        } else if (
+          Array.isArray(
+            seatsResponse?.data?.seats
+          )
+        ) {
+          seats =
+            seatsResponse.data.seats;
         }
 
         console.log(
-          'SmartSeat real seat layout:',
+          '[SmartSeat] REAL SEAT LAYOUT:',
           {
             scheduleId:
-              actualScheduleId,
+              resolvedScheduleId,
 
             busId:
-              resolvedBusId,
+              scheduleBusId,
 
             seatCount:
               seats.length,
 
-            seats
+            seats,
           }
         );
+
+        if (seats.length === 0) {
+          throw new Error(
+            'No seats were found for this schedule.'
+          );
+        }
+
+        if (!cancelled) {
+          setSeatLayout(seats);
+          setErrorMessage('');
+        }
+
       } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
         console.error(
-          'Booking flow loading error:',
+          '[SmartSeat] Booking flow loading error:',
           error
         );
 
-        if (!cancelled) {
-          setSeatLayout([]);
+        const status =
+          error?.response?.status;
 
-          setErrorMessage(
-            error?.response?.data?.message ||
-              error?.message ||
-              'Unable to load booking information.'
-          );
+        const backendMessage =
+          error?.response?.data?.message;
+
+        let message =
+          backendMessage ||
+          error?.message ||
+          'Unable to load booking information.';
+
+        if (status === 404) {
+          message =
+            'This booking schedule is no longer available. Please return to Search Buses and select the bus again.';
         }
+
+        setSeatLayout([]);
+        setErrorMessage(message);
+
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -295,10 +467,14 @@ const BookingFlow = () => {
       cancelled = true;
     };
   }, [
-    actualScheduleId,
-    actualBusId,
+    initialScheduleId,
+    routeScheduleId,
+    contextScheduleId,
+    routeBusId,
+    contextBusId,
+    selectedBus,
     selectBus,
-    selectSeat
+    selectSeat,
   ]);
 
   // ==========================================================
@@ -310,15 +486,20 @@ const BookingFlow = () => {
       return;
     }
 
-    selectSeat(
-      seat.seatNumber
-    );
+    const seatNumber =
+      seat?.seatNumber;
 
-    if (seat.adjacentSeat) {
+    if (!seatNumber) {
+      return;
+    }
+
+    selectSeat(seatNumber);
+
+    if (seat?.adjacentSeat) {
       const adjacentSeat =
         seatLayout.find(
           (item) =>
-            item.seatNumber ===
+            item?.seatNumber ===
             seat.adjacentSeat
         );
 
@@ -328,15 +509,21 @@ const BookingFlow = () => {
 
         adjacentSeatStatus:
           adjacentSeat?.type ||
-          'unknown'
+          adjacentSeat?.status ||
+          'unknown',
       });
     } else {
       setAdjacentSeatInfo(null);
     }
+
+    console.log(
+      '[SmartSeat] Selected seat:',
+      seat
+    );
   };
 
   // ==========================================================
-  // SEAT DESELECT
+  // DESELECT
   // ==========================================================
 
   const handleSeatDeselect = () => {
@@ -350,9 +537,7 @@ const BookingFlow = () => {
 
   const handleProceedToDetails = () => {
     if (!selectedSeat) {
-      alert(
-        'Please select a seat first.'
-      );
+      alert('Please select a seat first.');
       return;
     }
 
@@ -363,9 +548,12 @@ const BookingFlow = () => {
   // PASSENGER DETAILS
   // ==========================================================
 
-  const handlePassengerSubmit = (
-    details
-  ) => {
+  const handlePassengerSubmit = (details) => {
+    if (!details) {
+      alert('Please enter passenger details.');
+      return;
+    }
+
     setPassengerDetails(details);
     setStep(3);
   };
@@ -374,131 +562,153 @@ const BookingFlow = () => {
   // PAYMENT COMPLETE
   // ==========================================================
 
-  const handlePaymentComplete =
-    async () => {
-      if (!selectedSeat) {
-        alert(
-          'Please select a seat.'
-        );
-        return;
-      }
+  const handlePaymentComplete = async (
+    paymentData
+  ) => {
+    if (!selectedSeat) {
+      alert('Please select a seat.');
+      return;
+    }
 
-      if (!passengerDetails) {
-        alert(
-          'Passenger details are missing.'
-        );
-        return;
-      }
+    if (!passengerDetails) {
+      alert('Passenger details are missing.');
+      return;
+    }
 
-      try {
-        const bookingData = {
-          scheduleId:
-            actualScheduleId,
+    try {
+      const bookingData = {
+        scheduleId:
+          selectedBus?.scheduleId ||
+          initialScheduleId,
 
-          seatNumber:
-            selectedSeat,
+        seatNumber:
+          selectedSeat,
 
-          passengerDetails: {
-            name:
-              passengerDetails.name ||
-              passengerDetails.fullName ||
-              '',
+        passengerDetails: {
+          name:
+            passengerDetails?.name ||
+            passengerDetails?.fullName ||
+            '',
 
-            age:
-              Number(
-                passengerDetails.age
-              ),
+          age:
+            Number(
+              passengerDetails?.age
+            ),
 
-            gender:
-              passengerDetails.gender,
+          gender:
+            passengerDetails?.gender ||
+            '',
 
-            phone:
-              passengerDetails.phone
-          },
+          phone:
+            passengerDetails?.phone ||
+            '',
 
-          smartSeatMonitoring:
-            isMonitoringEnabled(
-              actualScheduleId
-            )
-        };
+          email:
+            passengerDetails?.email ||
+            '',
+        },
 
-        console.log(
-          'Creating booking:',
+        smartSeatMonitoring:
+          isMonitoringEnabled(
+            selectedBus?.scheduleId ||
+            initialScheduleId
+          ),
+
+        payment:
+          paymentData || null,
+      };
+
+      console.log(
+        '[SmartSeat] Creating booking:',
+        bookingData
+      );
+
+      const response =
+        await bookingService.createBooking(
           bookingData
         );
 
-        const response =
-          await bookingService.createBooking(
-            bookingData
-          );
+      console.log(
+        '[SmartSeat] Booking response:',
+        response
+      );
 
-        if (
-          response?.success
-        ) {
-          setBookingResult(
-            response.data
-          );
-
-          setStep(4);
-        } else {
-          alert(
-            response?.message ||
-              'Booking failed.'
-          );
-        }
-      } catch (error) {
-        console.error(
-          'Booking creation error:',
-          error
+      if (response?.success) {
+        setBookingResult(
+          response.data
         );
 
+        setStep(4);
+      } else {
         alert(
-          error?.response?.data?.message ||
-            error?.message ||
-            'Booking failed. Please try again.'
+          response?.message ||
+            'Booking failed.'
         );
       }
-    };
+
+    } catch (error) {
+      console.error(
+        '[SmartSeat] Booking creation error:',
+        error
+      );
+
+      alert(
+        error?.response?.data?.message ||
+          error?.message ||
+          'Booking failed. Please try again.'
+      );
+    }
+  };
 
   // ==========================================================
-  // RECOMMENDATIONS
+  // ALTERNATIVE SEATS
   // ==========================================================
 
-  const handleFindAlternative =
-    async () => {
-      if (
-        !actualScheduleId ||
-        !selectedSeat
-      ) {
-        return;
-      }
+  const handleFindAlternative = async () => {
+    const currentScheduleId =
+      selectedBus?.scheduleId ||
+      initialScheduleId;
 
-      try {
-        const response =
-          await recommendationService
-            .getSeatRecommendations(
-              actualScheduleId,
-              selectedSeat
-            );
+    if (
+      !currentScheduleId ||
+      !selectedSeat
+    ) {
+      return;
+    }
 
-        if (
-          response?.success
-        ) {
-          setRecommendations(
-            Array.isArray(
-              response.data
-            )
-              ? response.data
-              : []
+    try {
+      const response =
+        await recommendationService
+          .getSeatRecommendations(
+            currentScheduleId,
+            selectedSeat
           );
-        }
-      } catch (error) {
-        console.error(
-          'Recommendation error:',
-          error
+
+      if (response?.success) {
+        setRecommendations(
+          Array.isArray(
+            response.data
+          )
+            ? response.data
+            : []
         );
       }
-    };
+
+    } catch (error) {
+      console.error(
+        '[SmartSeat] Recommendation error:',
+        error
+      );
+    }
+  };
+
+  // ==========================================================
+  // RETRY
+  // ==========================================================
+
+  const handleRetry = () => {
+    window.location.reload();
+  };
 
   // ==========================================================
   // COMPLETE
@@ -507,6 +717,15 @@ const BookingFlow = () => {
   const handleComplete = () => {
     clearBooking();
     navigate('/my-bookings');
+  };
+
+  // ==========================================================
+  // BACK TO SEARCH
+  // ==========================================================
+
+  const handleBackToSearch = () => {
+    clearBooking();
+    navigate('/search');
   };
 
   // ==========================================================
@@ -525,39 +744,78 @@ const BookingFlow = () => {
   }
 
   // ==========================================================
-  // BUS ERROR
+  // ERROR
   // ==========================================================
 
-  if (!selectedBus) {
+  if (
+    errorMessage &&
+    seatLayout.length === 0
+  ) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-8">
         <Card>
           <CardBody>
             <div className="text-center py-10">
-              <h3 className="text-lg font-semibold text-gray-800">
-                Unable to load bus
+
+              <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-red-100 text-red-600 text-2xl">
+                !
+              </div>
+
+              <h3 className="text-xl font-semibold text-gray-900">
+                Unable to load seat layout
               </h3>
 
-              <p className="mt-2 text-sm text-gray-500">
-                {errorMessage ||
-                  'Bus information is unavailable.'}
+              <p className="mt-3 text-sm text-gray-500 max-w-lg mx-auto">
+                {errorMessage}
               </p>
 
-              <Button
-                variant="primary"
-                className="mt-5"
-                onClick={() =>
-                  navigate('/search')
-                }
-              >
-                Back to Search
-              </Button>
+              <div className="mt-6 flex flex-col sm:flex-row justify-center gap-3">
+
+                <Button
+                  variant="primary"
+                  onClick={
+                    handleBackToSearch
+                  }
+                >
+                  Back to Search
+                </Button>
+
+                <Button
+                  variant="secondary"
+                  onClick={
+                    handleRetry
+                  }
+                >
+                  Try Again
+                </Button>
+
+              </div>
             </div>
           </CardBody>
         </Card>
       </div>
     );
   }
+
+  // ==========================================================
+  // AISLE CONFIGURATION
+  // ==========================================================
+
+  const aisleAfter =
+    selectedBus?.seatConfiguration
+      ?.aisleAfter ??
+    selectedBus?.schedule?.busId
+      ?.seatConfiguration
+      ?.aisleAfter ??
+    2;
+
+  // ==========================================================
+  // CURRENT SCHEDULE ID
+  // ==========================================================
+
+  const currentScheduleId =
+    selectedBus?.scheduleId ||
+    initialScheduleId;
 
   // ==========================================================
   // MAIN UI
@@ -571,13 +829,16 @@ const BookingFlow = () => {
       ====================================================== */}
 
       <div className="mb-8">
+
         <div className="flex items-center justify-center overflow-x-auto">
+
           {[1, 2, 3, 4].map(
             (stepNumber) => (
               <div
                 key={stepNumber}
                 className="flex items-center flex-shrink-0"
               >
+
                 <div
                   className={`
                     flex
@@ -613,12 +874,15 @@ const BookingFlow = () => {
                     `}
                   />
                 )}
+
               </div>
             )
           )}
+
         </div>
 
         <div className="flex justify-center mt-2 text-xs sm:text-sm text-gray-600">
+
           <span className="w-20 sm:w-24 text-center">
             Select Seat
           </span>
@@ -634,21 +898,9 @@ const BookingFlow = () => {
           <span className="w-20 sm:w-24 text-center">
             Ticket
           </span>
+
         </div>
       </div>
-
-      {/* ======================================================
-          ERROR
-      ====================================================== */}
-
-      {errorMessage &&
-        seatLayout.length === 0 && (
-          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3">
-            <p className="text-sm font-medium text-red-800">
-              {errorMessage}
-            </p>
-          </div>
-        )}
 
       {/* ======================================================
           CONTENT
@@ -656,7 +908,9 @@ const BookingFlow = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-        {/* MAIN */}
+        {/* ====================================================
+            MAIN
+        ==================================================== */}
 
         <div className="lg:col-span-2">
 
@@ -664,29 +918,40 @@ const BookingFlow = () => {
 
           {step === 1 && (
             <SeatSelection
-              busId={actualBusId}
-              seatLayout={seatLayout}
-              selectedSeat={selectedSeat}
+              busId={
+                selectedBus?.busId ||
+                initialBusId
+              }
+
+              seatLayout={
+                seatLayout
+              }
+
+              selectedSeat={
+                selectedSeat
+              }
+
               onSeatSelect={
                 handleSeatSelect
               }
+
               onSeatDeselect={
                 handleSeatDeselect
               }
-              monitoredSeat={null}
+
+              monitoredSeat={
+                null
+              }
+
               recommendedSeats={
                 recommendations.map(
                   (item) =>
-                    item.seatNumber
+                    item?.seatNumber
                 )
               }
+
               aisleAfter={
-                selectedBus
-                  ?.seatConfiguration
-                  ?.aisleAfter ?? 2
-              }
-              errorMessage={
-                errorMessage
+                aisleAfter
               }
             />
           )}
@@ -698,6 +963,7 @@ const BookingFlow = () => {
               onSubmit={
                 handlePassengerSubmit
               }
+
               onCancel={() =>
                 setStep(1)
               }
@@ -709,14 +975,17 @@ const BookingFlow = () => {
           {step === 3 && (
             <PaymentForm
               amount={
-                selectedBus?.schedule
-                  ?.fare ||
-                selectedBus?.fare ||
-                0
+                Number(
+                  selectedBus?.fare ??
+                  selectedBus?.schedule?.fare ??
+                  0
+                )
               }
+
               onPaymentComplete={
                 handlePaymentComplete
               }
+
               onCancel={() =>
                 setStep(2)
               }
@@ -731,11 +1000,13 @@ const BookingFlow = () => {
                 booking={
                   bookingResult
                 }
+
                 onDownload={() =>
                   console.log(
                     'Download ticket'
                   )
                 }
+
                 onShare={() =>
                   console.log(
                     'Share ticket'
@@ -743,9 +1014,12 @@ const BookingFlow = () => {
                 }
               />
             )}
+
         </div>
 
-        {/* SIDEBAR */}
+        {/* ====================================================
+            SIDEBAR
+        ==================================================== */}
 
         <div className="space-y-6">
 
@@ -754,6 +1028,7 @@ const BookingFlow = () => {
           {step === 1 &&
             selectedSeat && (
               <>
+
                 <SmartSeatPanel
                   currentSeat={
                     selectedSeat
@@ -765,20 +1040,22 @@ const BookingFlow = () => {
 
                   monitoringEnabled={
                     isMonitoringEnabled(
-                      actualScheduleId
+                      currentScheduleId
                     )
                   }
 
                   onToggleMonitoring={() =>
                     setSeatMonitoring(
-                      actualScheduleId,
+                      currentScheduleId,
                       !isMonitoringEnabled(
-                        actualScheduleId
+                        currentScheduleId
                       )
                     )
                   }
 
-                  showPreferences={true}
+                  showPreferences={
+                    true
+                  }
 
                   onViewPreferences={() =>
                     navigate(
@@ -806,23 +1083,28 @@ const BookingFlow = () => {
                 >
                   Find Alternative Seats
                 </Button>
+
               </>
             )}
 
           {/* SUMMARY */}
 
           <BookingSummary
-            bus={selectedBus}
+            bus={
+              selectedBus
+            }
+
             selectedSeat={
               selectedSeat
             }
+
             passengerDetails={
               passengerDetails
             }
-            searchParams={{}}
+
             smartSeatMonitoring={
               isMonitoringEnabled(
-                actualScheduleId
+                currentScheduleId
               )
             }
           />
@@ -840,6 +1122,7 @@ const BookingFlow = () => {
               Go to My Bookings
             </Button>
           )}
+
         </div>
       </div>
     </div>
@@ -847,3 +1130,4 @@ const BookingFlow = () => {
 };
 
 export default BookingFlow;
+

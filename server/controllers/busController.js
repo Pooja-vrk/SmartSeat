@@ -12,607 +12,407 @@ const asyncHandler = require('../utils/asyncHandler');
 // GET /api/buses/search
 // ============================================================
 
-exports.searchBuses = asyncHandler(
-  async (req, res) => {
-    const {
-      from,
-      to,
-      date,
-      busType,
-      acType,
-      seatType,
-      minPrice,
-      maxPrice,
-      minSeats
-    } = req.query;
+exports.searchBuses = asyncHandler(async (req, res) => {
+  const {
+    from,
+    to,
+    date,
+    busType,
+    acType,
+    seatType,
+    minPrice,
+    maxPrice,
+    minSeats
+  } = req.query;
 
-    // --------------------------------------------------------
-    // ROUTE QUERY
-    // --------------------------------------------------------
+  const routeQuery = {};
 
-    const routeQuery = {};
-
-    if (from) {
-      routeQuery.source = {
-        $regex: from,
-        $options: 'i'
-      };
-    }
-
-    if (to) {
-      routeQuery.destination = {
-        $regex: to,
-        $options: 'i'
-      };
-    }
-
-    const routes =
-      await Route.find(
-        routeQuery
-      );
-
-    const routeIds =
-      routes.map(
-        (route) =>
-          route._id
-      );
-
-    if (routeIds.length === 0) {
-      return res.status(200).json({
-        success: true,
-        data: []
-      });
-    }
-
-    // --------------------------------------------------------
-    // SCHEDULE QUERY
-    // --------------------------------------------------------
-
-    const scheduleQuery = {
-      routeId: {
-        $in: routeIds
-      },
-      isActive: true
+  if (from) {
+    routeQuery.source = {
+      $regex: from,
+      $options: 'i'
     };
+  }
 
-    if (date) {
-      const searchDate =
-        new Date(date);
+  if (to) {
+    routeQuery.destination = {
+      $regex: to,
+      $options: 'i'
+    };
+  }
 
-      if (
-        !Number.isNaN(
-          searchDate.getTime()
-        )
-      ) {
-        const nextDay =
-          new Date(
-            searchDate
-          );
+  const routes = await Route.find(routeQuery);
 
-        nextDay.setDate(
-          nextDay.getDate() + 1
-        );
+  const routeIds = routes.map((route) => route._id);
 
-        scheduleQuery.travelDate = {
-          $gte: searchDate,
-          $lt: nextDay
-        };
-      }
-    }
-
-    let schedules =
-      await Schedule.find(
-        scheduleQuery
-      )
-        .populate('busId')
-        .populate('routeId')
-        .sort({
-          departureTime: 1
-        });
-
-    // --------------------------------------------------------
-    // FILTERS
-    // --------------------------------------------------------
-
-    if (
-      busType &&
-      busType.length > 0
-    ) {
-      schedules =
-        schedules.filter(
-          (schedule) =>
-            schedule.busId &&
-            busType.includes(
-              schedule.busId.busType
-            )
-        );
-    }
-
-    if (acType) {
-      schedules =
-        schedules.filter(
-          (schedule) => {
-            const type =
-              schedule.busId?.busType
-                ?.toUpperCase() || '';
-
-            return acType === 'ac'
-              ? type.includes('AC')
-              : !type.includes('AC');
-          }
-        );
-    }
-
-    if (seatType) {
-      schedules =
-        schedules.filter(
-          (schedule) => {
-            const type =
-              schedule.busId?.busType
-                ?.toUpperCase() || '';
-
-            return seatType === 'sleeper'
-              ? type.includes(
-                  'SLEEPER'
-                )
-              : !type.includes(
-                  'SLEEPER'
-                );
-          }
-        );
-    }
-
-    if (
-      minPrice !== undefined &&
-      minPrice !== ''
-    ) {
-      schedules =
-        schedules.filter(
-          (schedule) =>
-            schedule.fare >=
-            Number(minPrice)
-        );
-    }
-
-    if (
-      maxPrice !== undefined &&
-      maxPrice !== ''
-    ) {
-      schedules =
-        schedules.filter(
-          (schedule) =>
-            schedule.fare <=
-            Number(maxPrice)
-        );
-    }
-
-    if (
-      minSeats !== undefined &&
-      minSeats !== ''
-    ) {
-      schedules =
-        schedules.filter(
-          (schedule) =>
-            schedule.availableSeats >=
-            Number(minSeats)
-        );
-    }
-
-    // --------------------------------------------------------
-    // RESPONSE
-    // --------------------------------------------------------
-
-    const results =
-      schedules
-        .filter(
-          (schedule) =>
-            schedule.busId &&
-            schedule.routeId
-        )
-        .map(
-          (schedule) => ({
-            id:
-              schedule.busId._id,
-
-            operator:
-              schedule.busId.operatorName,
-
-            busNumber:
-              schedule.busId.busNumber,
-
-            busType:
-              schedule.busId.busType,
-
-            route: {
-              from:
-                schedule.routeId.source,
-
-              to:
-                schedule.routeId.destination,
-
-              source:
-                schedule.routeId.source,
-
-              destination:
-                schedule.routeId.destination,
-
-              distance:
-                schedule.routeId.distance,
-
-              estimatedDuration:
-                schedule.routeId
-                  .estimatedDuration
-            },
-
-            schedule: {
-              departure:
-                `${schedule.travelDate
-                  .toISOString()
-                  .split('T')[0]}T${
-                  schedule.departureTime
-                }`,
-
-              arrival:
-                `${schedule.travelDate
-                  .toISOString()
-                  .split('T')[0]}T${
-                  schedule.arrivalTime
-                }`,
-
-              departureTime:
-                schedule.departureTime,
-
-              arrivalTime:
-                schedule.arrivalTime,
-
-              duration:
-                schedule.routeId
-                  .estimatedDuration,
-
-              fare:
-                schedule.fare
-            },
-
-            travelDate:
-              schedule.travelDate,
-
-            departureTime:
-              schedule.departureTime,
-
-            arrivalTime:
-              schedule.arrivalTime,
-
-            fare:
-              schedule.fare,
-
-            availableSeats:
-              schedule.availableSeats,
-
-            totalSeats:
-              schedule.busId
-                .seatConfiguration
-                .totalSeats,
-
-            seatConfiguration:
-              schedule.busId
-                .seatConfiguration,
-
-            amenities:
-              schedule.busId
-                .amenities,
-
-            boardingPoints:
-              schedule.busId
-                .boardingPoints,
-
-            droppingPoints:
-              schedule.busId
-                .droppingPoints,
-
-            rating:
-              schedule.busId.rating,
-
-            scheduleId:
-              schedule._id
-          })
-        );
-
+  if (routeIds.length === 0) {
     return res.status(200).json({
       success: true,
-      data: results
+      data: []
     });
   }
-);
+
+  const scheduleQuery = {
+    routeId: {
+      $in: routeIds
+    },
+    isActive: true
+  };
+
+  if (date) {
+    const searchDate = new Date(date);
+
+    if (!Number.isNaN(searchDate.getTime())) {
+      const nextDay = new Date(searchDate);
+      nextDay.setDate(nextDay.getDate() + 1);
+
+      scheduleQuery.travelDate = {
+        $gte: searchDate,
+        $lt: nextDay
+      };
+    }
+  }
+
+  let schedules = await Schedule.find(scheduleQuery)
+    .populate('busId')
+    .populate('routeId')
+    .sort({
+      departureTime: 1
+    });
+
+  // ----------------------------------------------------------
+  // FILTERS
+  // ----------------------------------------------------------
+
+  if (busType && busType.length > 0) {
+    schedules = schedules.filter(
+      (schedule) =>
+        schedule.busId &&
+        busType.includes(schedule.busId.busType)
+    );
+  }
+
+  if (acType) {
+    schedules = schedules.filter((schedule) => {
+      const type =
+        schedule.busId?.busType?.toUpperCase() || '';
+
+      return acType === 'ac'
+        ? type.includes('AC')
+        : !type.includes('AC');
+    });
+  }
+
+  if (seatType) {
+    schedules = schedules.filter((schedule) => {
+      const type =
+        schedule.busId?.busType?.toUpperCase() || '';
+
+      return seatType === 'sleeper'
+        ? type.includes('SLEEPER')
+        : !type.includes('SLEEPER');
+    });
+  }
+
+  if (minPrice !== undefined && minPrice !== '') {
+    schedules = schedules.filter(
+      (schedule) =>
+        schedule.fare >= Number(minPrice)
+    );
+  }
+
+  if (maxPrice !== undefined && maxPrice !== '') {
+    schedules = schedules.filter(
+      (schedule) =>
+        schedule.fare <= Number(maxPrice)
+    );
+  }
+
+  if (minSeats !== undefined && minSeats !== '') {
+    schedules = schedules.filter(
+      (schedule) =>
+        schedule.availableSeats >= Number(minSeats)
+    );
+  }
+
+  // ----------------------------------------------------------
+  // RESPONSE
+  // ----------------------------------------------------------
+
+  const results = schedules
+    .filter(
+      (schedule) =>
+        schedule.busId &&
+        schedule.routeId
+    )
+    .map((schedule) => ({
+      id: schedule.busId._id,
+
+      operator: schedule.busId.operatorName,
+
+      busNumber: schedule.busId.busNumber,
+
+      busType: schedule.busId.busType,
+
+      route: {
+        from: schedule.routeId.source,
+        to: schedule.routeId.destination,
+        source: schedule.routeId.source,
+        destination: schedule.routeId.destination,
+        distance: schedule.routeId.distance,
+        estimatedDuration:
+          schedule.routeId.estimatedDuration
+      },
+
+      schedule: {
+        departure:
+          `${schedule.travelDate
+            .toISOString()
+            .split('T')[0]}T${schedule.departureTime}`,
+
+        arrival:
+          `${schedule.travelDate
+            .toISOString()
+            .split('T')[0]}T${schedule.arrivalTime}`,
+
+        departureTime: schedule.departureTime,
+
+        arrivalTime: schedule.arrivalTime,
+
+        duration:
+          schedule.routeId.estimatedDuration,
+
+        fare: schedule.fare
+      },
+
+      travelDate: schedule.travelDate,
+
+      departureTime: schedule.departureTime,
+
+      arrivalTime: schedule.arrivalTime,
+
+      fare: schedule.fare,
+
+      availableSeats:
+        schedule.availableSeats,
+
+      totalSeats:
+        schedule.busId.seatConfiguration.totalSeats,
+
+      seatConfiguration:
+        schedule.busId.seatConfiguration,
+
+      amenities:
+        schedule.busId.amenities,
+
+      boardingPoints:
+        schedule.busId.boardingPoints,
+
+      droppingPoints:
+        schedule.busId.droppingPoints,
+
+      rating:
+        schedule.busId.rating,
+
+      scheduleId: schedule._id
+    }));
+
+  return res.status(200).json({
+    success: true,
+    data: results
+  });
+});
 
 // ============================================================
 // GET BUS
 // GET /api/buses/:id
 // ============================================================
 
-exports.getBus = asyncHandler(
-  async (req, res) => {
-    const { id } =
-      req.params;
+exports.getBus = asyncHandler(async (req, res) => {
+  const { id } = req.params;
 
-    if (
-      !mongoose.isValidObjectId(id)
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid bus ID'
-      });
-    }
-
-    const bus =
-      await Bus.findById(id);
-
-    if (!bus) {
-      return res.status(404).json({
-        success: false,
-        message: 'Bus not found'
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      data: bus
+  if (!mongoose.isValidObjectId(id)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid bus ID'
     });
   }
-);
+
+  const bus = await Bus.findById(id);
+
+  if (!bus) {
+    return res.status(404).json({
+      success: false,
+      message: 'Bus not found'
+    });
+  }
+
+  return res.status(200).json({
+    success: true,
+    data: bus
+  });
+});
 
 // ============================================================
-// GET SEATS
+// GET BUS SEATS
 // GET /api/buses/:id/seats?scheduleId=...
 // ============================================================
 
-exports.getBusSeats =
-  asyncHandler(
-    async (req, res) => {
-      const {
-        id
-      } = req.params;
+exports.getBusSeats = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { scheduleId } = req.query;
 
-      const {
-        scheduleId
-      } = req.query;
+  if (!mongoose.isValidObjectId(id)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid bus ID'
+    });
+  }
 
-      // ------------------------------------------------------
-      // VALIDATION
-      // ------------------------------------------------------
+  if (!scheduleId) {
+    return res.status(400).json({
+      success: false,
+      message: 'Schedule ID is required'
+    });
+  }
 
-      if (
-        !mongoose.isValidObjectId(
-          id
-        )
-      ) {
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid bus ID'
-        });
-      }
+  if (!mongoose.isValidObjectId(scheduleId)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid schedule ID'
+    });
+  }
 
-      if (
-        !scheduleId
-      ) {
-        return res.status(400).json({
-          success: false,
-          message:
-            'Schedule ID is required'
-        });
-      }
+  const bus = await Bus.findById(id);
 
-      if (
-        !mongoose.isValidObjectId(
-          scheduleId
-        )
-      ) {
-        return res.status(400).json({
-          success: false,
-          message:
-            'Invalid schedule ID'
-        });
-      }
+  if (!bus) {
+    return res.status(404).json({
+      success: false,
+      message: 'Bus not found'
+    });
+  }
 
-      // ------------------------------------------------------
-      // VERIFY BUS
-      // ------------------------------------------------------
+  const schedule = await Schedule.findById(scheduleId);
 
-      const bus =
-        await Bus.findById(id);
+  if (!schedule) {
+    return res.status(404).json({
+      success: false,
+      message: 'Schedule not found'
+    });
+  }
 
-      if (!bus) {
-        return res.status(404).json({
-          success: false,
-          message: 'Bus not found'
-        });
-      }
+  if (schedule.busId.toString() !== id.toString()) {
+    return res.status(400).json({
+      success: false,
+      message: 'Schedule does not belong to this bus'
+    });
+  }
 
-      // ------------------------------------------------------
-      // VERIFY SCHEDULE
-      // ------------------------------------------------------
+  await Seat.releaseExpiredReservations();
 
-      const schedule =
-        await Schedule.findById(
-          scheduleId
-        );
+  const seats = await Seat.find({
+    scheduleId,
+    busId: id
+  }).sort({
+    row: 1,
+    column: 1
+  });
 
-      if (!schedule) {
-        return res.status(404).json({
-          success: false,
-          message:
-            'Schedule not found'
-        });
-      }
+  const formattedSeats = seats.map((seat) => ({
+    id: seat._id,
 
-      if (
-        schedule.busId.toString() !==
-        id.toString()
-      ) {
-        return res.status(400).json({
-          success: false,
-          message:
-            'Schedule does not belong to this bus'
-        });
-      }
+    seatNumber: seat.seatNumber,
 
-      // ------------------------------------------------------
-      // RELEASE EXPIRED RESERVATIONS
-      // ------------------------------------------------------
+    row: seat.row,
 
-      await Seat.releaseExpiredReservations();
+    column: seat.column,
 
-      // ------------------------------------------------------
-      // GET SEATS FOR THIS SCHEDULE
-      // ------------------------------------------------------
+    type: seat.status,
 
-      const seats =
-        await Seat.find({
-          scheduleId,
-          busId: id
-        }).sort({
-          row: 1,
-          column: 1
-        });
+    price: seat.price,
 
-      // ------------------------------------------------------
-      // FORMAT RESPONSE
-      // ------------------------------------------------------
+    isAisle: seat.seatType === 'aisle',
 
-      const formattedSeats =
-        seats.map(
-          (seat) => ({
-            id:
-              seat._id,
+    windowSide: seat.seatType === 'window',
 
-            seatNumber:
-              seat.seatNumber,
+    seatType: seat.seatType,
 
-            row:
-              seat.row,
+    position: seat.position,
 
-            column:
-              seat.column,
+    adjacentSeat:
+      Array.isArray(seat.adjacentSeatNumbers) &&
+      seat.adjacentSeatNumbers.length > 0
+        ? seat.adjacentSeatNumbers[0]
+        : null
+  }));
 
-            type:
-              seat.status,
+  return res.status(200).json({
+    success: true,
 
-            price:
-              seat.price,
+    data: formattedSeats,
 
-            isAisle:
-              seat.seatType ===
-              'aisle',
+    meta: {
+      busId: id,
 
-            windowSide:
-              seat.seatType ===
-              'window',
+      scheduleId,
 
-            seatType:
-              seat.seatType,
+      totalSeats: formattedSeats.length,
 
-            position:
-              seat.position,
-
-            adjacentSeat:
-              Array.isArray(
-                seat.adjacentSeatNumbers
-              ) &&
-              seat.adjacentSeatNumbers
-                .length > 0
-                ? seat
-                    .adjacentSeatNumbers[0]
-                : null
-          })
-        );
-
-      return res.status(200).json({
-        success: true,
-
-        data: formattedSeats,
-
-        meta: {
-          busId: id,
-
-          scheduleId,
-
-          totalSeats:
-            formattedSeats.length,
-
-          availableSeats:
-            formattedSeats.filter(
-              (seat) =>
-                seat.type ===
-                'available'
-            ).length
-        }
-      });
+      availableSeats:
+        formattedSeats.filter(
+          (seat) => seat.type === 'available'
+        ).length
     }
-  );
+  });
+});
 
 // ============================================================
 // GET SCHEDULE
 // GET /api/schedules/:id
 // ============================================================
 
-exports.getSchedule =
-  asyncHandler(
-    async (req, res) => {
-      const { id } =
-        req.params;
+exports.getSchedule = asyncHandler(async (req, res) => {
+  const { id } = req.params;
 
-      if (
-        !mongoose.isValidObjectId(
-          id
-        )
-      ) {
-        return res.status(400).json({
-          success: false,
-          message:
-            'Invalid schedule ID'
-        });
-      }
+  if (!mongoose.isValidObjectId(id)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid schedule ID'
+    });
+  }
 
-      const schedule =
-        await Schedule.findById(
-          id
-        )
-          .populate('busId')
-          .populate('routeId');
+  const schedule = await Schedule.findById(id)
+    .populate('busId')
+    .populate('routeId');
 
-      if (!schedule) {
-        return res.status(404).json({
-          success: false,
-          message:
-            'Schedule not found'
-        });
-      }
+  if (!schedule) {
+    return res.status(404).json({
+      success: false,
+      message: 'Schedule not found'
+    });
+  }
 
-      return res.status(200).json({
-        success: true,
-        data: schedule
-      });
-    }
-  );
+  return res.status(200).json({
+    success: true,
+    data: schedule
+  });
+});
 
 // ============================================================
 // GET ROUTES
-// GET /api/routes
+// GET /api/buses/routes
 // ============================================================
 
-exports.getRoutes =
-  asyncHandler(
-    async (req, res) => {
-      const routes =
-        await Route.find({
-          isActive: true
-        }).sort({
-          source: 1,
-          destination: 1
-        });
+exports.getRoutes = asyncHandler(async (req, res) => {
+  const routes = await Route.find({
+    isActive: true
+  }).sort({
+    source: 1,
+    destination: 1
+  });
 
-      return res.status(200).json({
-        success: true,
-        data: routes
-      });
-    }
-  );
+  return res.status(200).json({
+    success: true,
+    data: routes
+  });
+});

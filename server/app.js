@@ -103,22 +103,27 @@ app.use(express.urlencoded({ extended: true }));
 // RATE LIMITING
 // ============================================================
 
-const limiter = rateLimit({
-  windowMs:
-    parseInt(process.env.RATE_LIMIT_WINDOW_MS) ||
-    15 * 60 * 1000,
+if (process.env.NODE_ENV === 'production') {
+  const limiter = rateLimit({
+    windowMs:
+      parseInt(process.env.RATE_LIMIT_WINDOW_MS) ||
+      15 * 60 * 1000,
 
-  max:
-    parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) ||
-    100,
+    max:
+      parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) ||
+      100,
 
-  message: {
-    success: false,
-    message: 'Too many requests from this IP, please try again later.'
-  }
-});
+    message: {
+      success: false,
+      message: 'Too many requests from this IP, please try again later.'
+    },
 
-app.use('/api/', limiter);
+    standardHeaders: true,
+    legacyHeaders: false
+  });
+
+  //app.use('/api/', limiter);
+}
 
 // ============================================================
 // AUTH RATE LIMITING
