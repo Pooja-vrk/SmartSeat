@@ -28,10 +28,13 @@ const AdminBuses = () => {
     operator: '',
     busNumber: '',
     busType: '',
+    registrationNumber: '',
     routeFrom: '',
     routeTo: '',
     totalSeats: ''
   });
+  const [formError, setFormError] = useState('');
+  const [formSuccess, setFormSuccess] = useState('');
 
   useEffect(() => {
     loadBuses();
@@ -52,51 +55,66 @@ const AdminBuses = () => {
   };
 
   const handleAddBus = async () => {
+    setFormError('');
+    setFormSuccess('');
+
+    // Basic client-side validation
+    if (!formData.operator.trim()) {
+      setFormError('Operator name is required');
+      return;
+    }
+    if (!formData.busNumber.trim()) {
+      setFormError('Bus number is required');
+      return;
+    }
+    if (!formData.busType) {
+      setFormError('Bus type is required');
+      return;
+    }
+    if (!formData.totalSeats || Number(formData.totalSeats) < 1) {
+      setFormError('Total seats must be a positive number');
+      return;
+    }
+
     try {
+      const cols = 4;
+      const rows = Math.ceil(Number(formData.totalSeats) / cols);
+
       const response = await adminService.createBus({
-        operator: formData.operator,
-        busNumber: formData.busNumber,
-        busType: formData.busType,
-        route: {
-          from: formData.routeFrom,
-          to: formData.routeTo
-        },
-        totalSeats: parseInt(formData.totalSeats),
-        seatLayout: {
-          rows: 10,
-          columns: 4,
-          aisleAfter: 2
-        },
-        amenities: ['WiFi', 'USB Charging', 'Water Bottle']
+        operator:           formData.operator,
+        busNumber:          formData.busNumber,
+        busType:            formData.busType,
+        registrationNumber: formData.registrationNumber.trim() || undefined,
+        totalSeats:         parseInt(formData.totalSeats),
+        rows,
+        columns:            cols,
+        aisleAfter:         2,
+        boardingPoints:     formData.routeFrom ? [formData.routeFrom] : [],
+        droppingPoints:     formData.routeTo   ? [formData.routeTo]   : [],
+        amenities:          ['WiFi', 'USB Charging', 'Water Bottle']
       });
 
       if (response.success) {
         setShowAddModal(false);
-        setFormData({
-          operator: '',
-          busNumber: '',
-          busType: '',
-          routeFrom: '',
-          routeTo: '',
-          totalSeats: ''
-        });
+        setFormData({ operator: '', busNumber: '', busType: '', registrationNumber: '', routeFrom: '', routeTo: '', totalSeats: '' });
+        setFormError('');
         loadBuses();
       }
     } catch (error) {
+      setFormError(error?.message || 'Failed to add bus. Please try again.');
       console.error('Error adding bus:', error);
     }
   };
 
   const handleEditBus = async () => {
+    setFormError('');
     try {
-      const response = await adminService.updateBus(selectedBus.id, {
-        operator: formData.operator,
+      const response = await adminService.updateBus(selectedBus.id || selectedBus._id, {
+        operator:  formData.operator,
         busNumber: formData.busNumber,
-        busType: formData.busType,
-        route: {
-          from: formData.routeFrom,
-          to: formData.routeTo
-        }
+        busType:   formData.busType,
+        boardingPoints: formData.routeFrom ? [formData.routeFrom] : undefined,
+        droppingPoints: formData.routeTo   ? [formData.routeTo]   : undefined
       });
 
       if (response.success) {
@@ -105,13 +123,14 @@ const AdminBuses = () => {
         loadBuses();
       }
     } catch (error) {
+      setFormError(error?.message || 'Failed to update bus.');
       console.error('Error updating bus:', error);
     }
   };
 
   const handleDeleteBus = async () => {
     try {
-      const response = await adminService.deleteBus(selectedBus.id);
+      const response = await adminService.deleteBus(selectedBus.id || selectedBus._id);
       if (response.success) {
         setShowDeleteModal(false);
         setSelectedBus(null);
@@ -124,13 +143,15 @@ const AdminBuses = () => {
 
   const openEditModal = (bus) => {
     setSelectedBus(bus);
+    setFormError('');
     setFormData({
-      operator: bus.operator,
-      busNumber: bus.busNumber,
-      busType: bus.busType,
-      routeFrom: bus.route.from,
-      routeTo: bus.route.to,
-      totalSeats: bus.totalSeats
+      operator:           bus.operator || bus.operatorName || '',
+      busNumber:          bus.busNumber || '',
+      busType:            bus.busType || '',
+      registrationNumber: bus.registrationNumber || '',
+      routeFrom:          bus.route?.from || bus.boardingPoints?.[0] || '',
+      routeTo:            bus.route?.to   || bus.droppingPoints?.[0] || '',
+      totalSeats:         bus.totalSeats || bus.seatConfiguration?.totalSeats || ''
     });
     setShowEditModal(true);
   };
@@ -141,14 +162,21 @@ const AdminBuses = () => {
   };
 
   const filteredBuses = buses.filter(bus => {
-    const matchesSearch = 
-      bus.operator.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      bus.busNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      bus.route.from.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      bus.route.to.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'all' || bus.status === statusFilter;
-    
+    const operator  = (bus.operator || '').toLowerCase();
+    const busNumber = (bus.busNumber || '').toLowerCase();
+    const routeFrom = (bus.route?.from || '').toLowerCase();
+    const routeTo   = (bus.route?.to   || '').toLowerCase();
+    const query     = searchQuery.toLowerCase();
+
+    const matchesSearch =
+      operator.includes(query) ||
+      busNumber.includes(query) ||
+      routeFrom.includes(query) ||
+      routeTo.includes(query);
+
+    const matchesStatus =
+      statusFilter === 'all' || bus.status === statusFilter;
+
     return matchesSearch && matchesStatus;
   });
 
@@ -271,12 +299,17 @@ const AdminBuses = () => {
       {/* Add Bus Modal */}
       <Modal
         isOpen={showAddModal}
-        onClose={() => setShowAddModal(false)}
+        onClose={() => { setShowAddModal(false); setFormError(''); }}
         title="Add New Bus"
         size="md"
       >
         <ModalBody>
           <div className="space-y-4">
+            {formError && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                {formError}
+              </div>
+            )}
             <Input
               label="Operator Name"
               placeholder="Enter operator name"
@@ -286,10 +319,16 @@ const AdminBuses = () => {
             />
             <Input
               label="Bus Number"
-              placeholder="Enter bus number"
+              placeholder="e.g. ST-2024-001"
               value={formData.busNumber}
               onChange={(e) => setFormData({...formData, busNumber: e.target.value})}
               required
+            />
+            <Input
+              label="Registration Number"
+              placeholder="e.g. MH-01-AB-1234 (optional — auto-generated if empty)"
+              value={formData.registrationNumber}
+              onChange={(e) => setFormData({...formData, registrationNumber: e.target.value})}
             />
             <Select
               label="Bus Type"
@@ -307,24 +346,22 @@ const AdminBuses = () => {
             />
             <div className="grid grid-cols-2 gap-4">
               <Input
-                label="From"
+                label="From (Boarding)"
                 placeholder="Departure city"
                 value={formData.routeFrom}
                 onChange={(e) => setFormData({...formData, routeFrom: e.target.value})}
-                required
               />
               <Input
-                label="To"
+                label="To (Dropping)"
                 placeholder="Destination city"
                 value={formData.routeTo}
                 onChange={(e) => setFormData({...formData, routeTo: e.target.value})}
-                required
               />
             </div>
             <Input
               label="Total Seats"
               type="number"
-              placeholder="Enter total seats"
+              placeholder="e.g. 40"
               value={formData.totalSeats}
               onChange={(e) => setFormData({...formData, totalSeats: e.target.value})}
               required
@@ -332,7 +369,7 @@ const AdminBuses = () => {
           </div>
         </ModalBody>
         <ModalFooter>
-          <Button variant="outline" onClick={() => setShowAddModal(false)}>
+          <Button variant="outline" onClick={() => { setShowAddModal(false); setFormError(''); }}>
             Cancel
           </Button>
           <Button variant="primary" onClick={handleAddBus}>
@@ -344,12 +381,17 @@ const AdminBuses = () => {
       {/* Edit Bus Modal */}
       <Modal
         isOpen={showEditModal}
-        onClose={() => setShowEditModal(false)}
+        onClose={() => { setShowEditModal(false); setFormError(''); }}
         title="Edit Bus"
         size="md"
       >
         <ModalBody>
           <div className="space-y-4">
+            {formError && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                {formError}
+              </div>
+            )}
             <Input
               label="Operator Name"
               value={formData.operator}
@@ -392,7 +434,7 @@ const AdminBuses = () => {
           </div>
         </ModalBody>
         <ModalFooter>
-          <Button variant="outline" onClick={() => setShowEditModal(false)}>
+          <Button variant="outline" onClick={() => { setShowEditModal(false); setFormError(''); }}>
             Cancel
           </Button>
           <Button variant="primary" onClick={handleEditBus}>

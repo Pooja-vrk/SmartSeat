@@ -17,7 +17,8 @@ const {
   deleteRoute,
   createSchedule,
   updateSchedule,
-  deleteSchedule
+  deleteSchedule,
+  reportDelay
 } = require('../controllers/adminController');
 const { authenticate, requireAdmin } = require('../middleware/auth');
 
@@ -38,5 +39,6 @@ router.delete('/routes/:id', authenticate, requireAdmin, deleteRoute);
 router.post('/schedules', authenticate, requireAdmin, createSchedule);
 router.patch('/schedules/:id', authenticate, requireAdmin, updateSchedule);
 router.delete('/schedules/:id', authenticate, requireAdmin, deleteSchedule);
+router.post('/schedules/:id/delay', authenticate, requireAdmin, reportDelay);
 
 module.exports = router;

@@ -40,6 +40,12 @@ const scheduleSchema = new mongoose.Schema({
   availableSeats: {
     type: Number,
     default: 0
+  },
+  delayMinutes: {
+    type: Number,
+    default: 0,
+    min: [0, 'Delay cannot be negative'],
+    comment: 'Delay in minutes (0 = on time). Set by admin when a bus is running late.'
   }
 }, {
   timestamps: true

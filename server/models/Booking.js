@@ -57,10 +57,28 @@ const bookingSchema = new mongoose.Schema({
       match: [/^[0-9]{10}$/, 'Please provide a valid 10-digit phone number']
     }
   },
+  baseFare: {
+    type: Number,
+    required: true,
+    min: [0, 'Base fare cannot be negative']
+  },
+  gstRate: {
+    type: Number,
+    required: true,
+    min: [0, 'GST rate cannot be negative'],
+    default: 0
+  },
+  gstAmount: {
+    type: Number,
+    required: true,
+    min: [0, 'GST amount cannot be negative'],
+    default: 0
+  },
   fare: {
     type: Number,
     required: true,
-    min: [0, 'Fare cannot be negative']
+    min: [0, 'Fare cannot be negative'],
+    comment: 'Total fare including GST (baseFare + gstAmount)'
   },
   paymentStatus: {
     type: String,

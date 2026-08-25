@@ -150,17 +150,22 @@ async function seed() {
 
     console.log('Creating schedules...');
 
-    // Create schedules
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(0, 0, 0, 0);
+    // Create schedules with rolling dates — always in the future relative to
+    // when the seed is run. Dates are stored as UTC midnight so the date
+    // query in busController (new Date(dateStr) which parses as UTC) matches.
+    const dayOffset = (n) => {
+      const d = new Date();
+      d.setUTCDate(d.getUTCDate() + n);
+      d.setUTCHours(0, 0, 0, 0);  // UTC midnight — consistent with frontend date parsing
+      return d;
+    };
 
     const schedule1 = await Schedule.create({
       busId: bus1._id,
       routeId: route1._id,
       departureTime: '22:00',
       arrivalTime: '02:30',
-      travelDate: tomorrow,
+      travelDate: dayOffset(1),
       fare: 450,
       isActive: true,
       availableSeats: 40
@@ -171,7 +176,7 @@ async function seed() {
       routeId: route1._id,
       departureTime: '23:30',
       arrivalTime: '04:00',
-      travelDate: tomorrow,
+      travelDate: dayOffset(1),
       fare: 550,
       isActive: true,
       availableSeats: 48
@@ -182,7 +187,7 @@ async function seed() {
       routeId: route2._id,
       departureTime: '06:00',
       arrivalTime: '11:30',
-      travelDate: tomorrow,
+      travelDate: dayOffset(2),
       fare: 350,
       isActive: true,
       availableSeats: 36
@@ -241,6 +246,12 @@ async function seed() {
     console.log('Found seat 05A:', seat05A ? 'Yes' : 'No');
     
     if (seat05A) {
+      // Calculate GST for the seed booking using the same logic as bookingService
+      const { GST_RATE } = require('../config/gst');
+      const seedBaseFare   = schedule1.fare;
+      const seedGstAmount  = Math.round(seedBaseFare * (GST_RATE / 100) * 100) / 100;
+      const seedTotalFare  = Math.round((seedBaseFare + seedGstAmount) * 100) / 100;
+
       const booking1 = await Booking.create({
         bookingId: 'BK001',
         userId: passengerA._id,
@@ -254,7 +265,10 @@ async function seed() {
           gender: 'male',
           phone: passengerA.phone
         },
-        fare: schedule1.fare,
+        baseFare:  seedBaseFare,
+        gstRate:   GST_RATE,
+        gstAmount: seedGstAmount,
+        fare:      seedTotalFare,
         paymentStatus: 'completed',
         bookingStatus: 'confirmed',
         smartSeatMonitoring: true

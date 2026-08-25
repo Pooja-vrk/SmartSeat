@@ -52,6 +52,7 @@ const BookingFlow = () => {
 
   const [passengerDetails, setPassengerDetails] = useState(null);
   const [bookingResult, setBookingResult] = useState(null);
+  const [pendingBooking, setPendingBooking] = useState(null);   // backend-created booking awaiting mock payment
 
   const [recommendations, setRecommendations] = useState([]);
   const [errorMessage, setErrorMessage] = useState('');
@@ -466,16 +467,13 @@ const BookingFlow = () => {
     return () => {
       cancelled = true;
     };
-  }, [
-    initialScheduleId,
-    routeScheduleId,
-    contextScheduleId,
-    routeBusId,
-    contextBusId,
-    selectedBus,
-    selectBus,
-    selectSeat,
-  ]);
+ }, [
+  initialScheduleId,
+  routeScheduleId,
+  contextScheduleId,
+  routeBusId,
+  contextBusId,
+]);
 
   // ==========================================================
   // SEAT SELECT
@@ -545,35 +543,29 @@ const BookingFlow = () => {
   };
 
   // ==========================================================
-  // PASSENGER DETAILS
+  // PASSENGER DETAILS → CREATE BOOKING → PAYMENT
+  //
+  // Booking is created HERE so the backend-authoritative fare
+  // (baseFare, gstRate, gstAmount, booking.fare) is available
+  // to PaymentForm before the user pays.
+  //
+  // The backend ignores any monetary values from req.body.
+  // booking.fare comes from calculateGST(schedule.fare) on the
+  // server — it is the sole source of truth.
   // ==========================================================
 
-  const handlePassengerSubmit = (details) => {
+  const handlePassengerSubmit = async (details) => {
     if (!details) {
       alert('Please enter passenger details.');
       return;
     }
 
-    setPassengerDetails(details);
-    setStep(3);
-  };
-
-  // ==========================================================
-  // PAYMENT COMPLETE
-  // ==========================================================
-
-  const handlePaymentComplete = async (
-    paymentData
-  ) => {
     if (!selectedSeat) {
-      alert('Please select a seat.');
+      alert('Please select a seat first.');
       return;
     }
 
-    if (!passengerDetails) {
-      alert('Passenger details are missing.');
-      return;
-    }
+    setPassengerDetails(details);
 
     try {
       const bookingData = {
@@ -581,83 +573,68 @@ const BookingFlow = () => {
           selectedBus?.scheduleId ||
           initialScheduleId,
 
-        seatNumber:
-          selectedSeat,
+        seatNumber: selectedSeat,
 
         passengerDetails: {
-          name:
-            passengerDetails?.name ||
-            passengerDetails?.fullName ||
-            '',
-
-          age:
-            Number(
-              passengerDetails?.age
-            ),
-
-          gender:
-            passengerDetails?.gender ||
-            '',
-
-          phone:
-            passengerDetails?.phone ||
-            '',
-
-          email:
-            passengerDetails?.email ||
-            '',
+          name:   details?.name || details?.fullName || '',
+          age:    Number(details?.age),
+          gender: details?.gender || '',
+          phone:  details?.phone || '',
+          email:  details?.email || '',
         },
 
-        smartSeatMonitoring:
-          isMonitoringEnabled(
-            selectedBus?.scheduleId ||
-            initialScheduleId
-          ),
-
-        payment:
-          paymentData || null,
+        smartSeatMonitoring: isMonitoringEnabled(
+          selectedBus?.scheduleId || initialScheduleId
+        ),
       };
 
-      console.log(
-        '[SmartSeat] Creating booking:',
-        bookingData
-      );
+      console.log('[SmartSeat] Creating booking before payment:', bookingData);
 
-      const response =
-        await bookingService.createBooking(
-          bookingData
-        );
+      const response = await bookingService.createBooking(bookingData);
 
-      console.log(
-        '[SmartSeat] Booking response:',
-        response
-      );
+      console.log('[SmartSeat] Booking response:', response);
 
       if (response?.success) {
-        setBookingResult(
-          response.data
-        );
-
-        setStep(4);
+        // Store the backend-created booking.
+        // PaymentForm will display response.data.fare — the backend-authoritative total.
+        setPendingBooking(response.data);
+        setStep(3);
       } else {
-        alert(
-          response?.message ||
-            'Booking failed.'
-        );
+        alert(response?.message || 'Booking failed. Please try again.');
       }
-
     } catch (error) {
-      console.error(
-        '[SmartSeat] Booking creation error:',
-        error
-      );
-
+      console.error('[SmartSeat] Booking creation error:', error);
       alert(
         error?.response?.data?.message ||
           error?.message ||
           'Booking failed. Please try again.'
       );
     }
+  };
+
+  // ==========================================================
+  // PAYMENT COMPLETE
+  //
+  // Booking was already created in handlePassengerSubmit.
+  // Payment is mock (simulated). We simply record the payment
+  // data and show the ticket using the already-created booking.
+  // ==========================================================
+
+  const handlePaymentComplete = (paymentData) => {
+    if (!pendingBooking) {
+      alert('Booking data is missing. Please start again.');
+      return;
+    }
+
+    console.log('[SmartSeat] Mock payment completed:', paymentData);
+
+    // Combine the backend booking with the mock payment receipt for the ticket.
+    setBookingResult({
+      ...pendingBooking,
+      payment: paymentData,
+    });
+
+    setStep(4);
   };
 
   // ==========================================================
@@ -975,20 +952,36 @@ const BookingFlow = () => {
           {step === 3 && (
             <PaymentForm
               amount={
-                Number(
-                  selectedBus?.fare ??
-                  selectedBus?.schedule?.fare ??
-                  0
-                )
+                // Backend-authoritative total: booking.fare = baseFare + gstAmount
+                // calculated by bookingService.createBooking() from schedule.fare in DB.
+                Number(pendingBooking?.fare ?? 0)
               }
 
               onPaymentComplete={
                 handlePaymentComplete
               }
 
-              onCancel={() =>
-                setStep(2)
-              }
+              onCancel={() => {
+                // User backed out of payment.
+                // Cancel the pending booking via the existing cancellation API so
+                // the seat is released back to 'available' before returning to Step 2.
+                // This prevents a stuck 'pending' booking from blocking the seat.
+                if (pendingBooking?._id) {
+                  bookingService
+                    .cancelBooking(
+                      pendingBooking._id,
+                      'Payment cancelled by user'
+                    )
+                    .catch((err) =>
+                      console.warn(
+                        '[SmartSeat] Could not cancel pending booking on back:',
+                        err
+                      )
+                    );
+                }
+                setPendingBooking(null);
+                setStep(2);
+              }}
             />
           )}
 

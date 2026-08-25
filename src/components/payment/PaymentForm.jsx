@@ -210,10 +210,13 @@ const PaymentForm = ({
       </CardHeader>
       <CardBody>
         <form onSubmit={handleSubmit}>
-          {/* Amount Display */}
+          {/* Amount Display — value comes from backend-calculated GST total via BookingFlow */}
           <div className="mb-6 p-4 bg-gradient-to-r from-primary-500 to-primary-600 rounded-lg text-white text-center">
             <p className="text-sm text-primary-100 mb-1">Total Amount</p>
-            <p className="text-3xl font-bold">₹{amount}</p>
+            <p className="text-3xl font-bold">
+              ₹{Number(amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </p>
+            <p className="text-xs text-primary-200 mt-1">Includes GST</p>
           </div>
 
           {/* Payment Methods */}
@@ -286,7 +289,7 @@ const PaymentForm = ({
               className="flex-1"
               icon={CheckCircle}
             >
-              {processing ? 'Processing...' : `Pay ₹${amount}`}
+              {processing ? 'Processing...' : `Pay ₹${Number(amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
             </Button>
           </div>
         </form>

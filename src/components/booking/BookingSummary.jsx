@@ -18,6 +18,8 @@ import {
   IndianRupee,
 } from 'lucide-react';
 
+import { calculateGST } from '../../config/gst';
+
 const BookingSummary = ({
   bus,
   selectedSeat,
@@ -76,6 +78,9 @@ const BookingSummary = ({
       bus?.fare ??
       0
     );
+
+  // GST breakdown (computed client-side for display; backend is the source of truth)
+  const { gstRate, gstAmount, totalAmount } = calculateGST(fare);
 
   // ==========================================================
   // DATE FORMATTER
@@ -505,37 +510,52 @@ const BookingSummary = ({
           </div>
 
           {/* ==================================================
-              FARE
+              FARE BREAKDOWN
           ================================================== */}
 
-          <div className="flex items-center justify-between p-4 bg-gradient-to-r from-primary-500 to-primary-600 rounded-lg text-white">
+          <div className="rounded-lg border border-gray-200 overflow-hidden">
 
-            <div className="flex items-center gap-3">
-
-              <IndianRupee className="w-6 h-6" />
-
-              <div>
-
-                <p className="text-sm opacity-80">
-                  Total Fare
+            <div className="px-4 py-2 bg-gray-50 border-b border-gray-200">
+              <div className="flex items-center gap-2">
+                <IndianRupee className="w-4 h-4 text-gray-500" />
+                <p className="text-sm font-semibold text-gray-700">
+                  Fare Details
                 </p>
+              </div>
+            </div>
 
-                <p className="text-2xl font-bold">
-                  ₹{fare.toLocaleString(
-                    'en-IN'
-                  )}
-                </p>
+            <div className="px-4 py-3 space-y-2">
 
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600">
+                  Base Fare
+                </span>
+                <span className="font-medium text-gray-900">
+                  ₹{fare.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600">
+                  GST ({gstRate}%)
+                </span>
+                <span className="font-medium text-gray-900">
+                  ₹{gstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
               </div>
 
             </div>
 
-            <div className="text-right">
-
-              <p className="text-xs opacity-80">
-                Per seat
-              </p>
-
+            <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-primary-500 to-primary-600 text-white">
+              <div className="flex items-center gap-2">
+                <IndianRupee className="w-5 h-5" />
+                <span className="text-sm font-semibold">
+                  Total
+                </span>
+              </div>
+              <span className="text-xl font-bold">
+                ₹{totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
             </div>
 
           </div>

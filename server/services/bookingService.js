@@ -7,6 +7,24 @@ const SeatChangeHistory = require('../models/SeatChangeHistory');
 const smartSeatService = require('./smartSeatService');
 const recommendationService = require('./recommendationService');
 const { getAvailableSeats } = require('../utils/seatUtils');
+const { GST_RATE } = require('../config/gst');
+
+/**
+ * Calculate GST breakdown for a given base fare.
+ *
+ * @param {number} baseFare - The raw fare before tax (schedule.fare)
+ * @returns {{ baseFare: number, gstRate: number, gstAmount: number, totalAmount: number }}
+ */
+function calculateGST(baseFare) {
+  const gstAmount = Math.round(baseFare * (GST_RATE / 100) * 100) / 100;
+  const totalAmount = Math.round((baseFare + gstAmount) * 100) / 100;
+  return {
+    baseFare,
+    gstRate: GST_RATE,
+    gstAmount,
+    totalAmount
+  };
+}
 
 /**
  * Booking Service - Handles booking operations with atomic seat reservation
@@ -65,6 +83,9 @@ class BookingService {
       // Generate booking ID
       const bookingId = `BK${Date.now()}${Math.floor(Math.random() * 1000)}`;
 
+      // Calculate GST on the schedule fare
+      const { baseFare, gstRate, gstAmount, totalAmount } = calculateGST(schedule.fare);
+
       // Create booking
       const booking = await Booking.create([{
         bookingId,
@@ -74,7 +95,10 @@ class BookingService {
         routeId: schedule.routeId,
         seatNumber,
         passengerDetails,
-        fare: schedule.fare,
+        baseFare,
+        gstRate,
+        gstAmount,
+        fare: totalAmount,        // fare = total (baseFare + gstAmount) — kept for backward compat
         paymentStatus: 'pending',
         bookingStatus: 'pending',
         smartSeatMonitoring
@@ -164,7 +188,13 @@ class BookingService {
    */
   async getBookingById(bookingId) {
     try {
-      const booking = await Booking.findOne({ bookingId })
+      // Find booking by either MongoDB _id or custom bookingId
+      const booking = await Booking.findOne({ 
+        $or: [
+          { _id: bookingId },
+          { bookingId: bookingId }
+        ]
+      })
         .populate('scheduleId')
         .populate('busId')
         .populate('routeId')
@@ -197,7 +227,13 @@ class BookingService {
     try {
       session.startTransaction();
 
-      const booking = await Booking.findOne({ bookingId }).session(session);
+      // Find booking by either MongoDB _id or custom bookingId
+      const booking = await Booking.findOne({ 
+        $or: [
+          { _id: bookingId },
+          { bookingId: bookingId }
+        ]
+      }).session(session);
       
       if (!booking) {
         throw new Error('Booking not found');
@@ -262,7 +298,13 @@ class BookingService {
     try {
       session.startTransaction();
 
-      const booking = await Booking.findOne({ bookingId }).session(session);
+      // Find booking by either MongoDB _id or custom bookingId
+      const booking = await Booking.findOne({ 
+        $or: [
+          { _id: bookingId },
+          { bookingId: bookingId }
+        ]
+      }).session(session);
       
       if (!booking) {
         throw new Error('Booking not found');

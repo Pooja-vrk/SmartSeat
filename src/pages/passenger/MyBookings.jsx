@@ -195,7 +195,7 @@ const MyBookings = () => {
                         <p className="font-medium text-primary-600">{booking.seatNumber || 'N/A'}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-600 mb-1">Fare</p>
+                        <p className="text-xs text-gray-600 mb-1">Total</p>
                         <p className="font-medium text-gray-900">₹{booking.fare || 'N/A'}</p>
                       </div>
                     </div>
@@ -223,7 +223,7 @@ const MyBookings = () => {
                     </Link>
                     {booking.bookingStatus === 'confirmed' && (
                       <>
-                        <Link to={`/booking/${booking._id}`}>
+                        <Link to={`/change-seat/${booking._id}`}>
                           <Button variant="outline" size="sm">
                             Change Seat
                           </Button>

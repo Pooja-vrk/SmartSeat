@@ -128,8 +128,7 @@ const SeatSelection = ({
   // ==========================================================
 
   const getSeatStyles = (seat) => {
-    const status =
-      getSeatStatus(seat);
+    const status = getSeatStatus(seat);
 
     const base =
       'w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center text-[10px] sm:text-xs font-semibold transition-all duration-200 select-none';
@@ -142,7 +141,7 @@ const SeatSelection = ({
         'bg-primary-600 border-2 border-primary-600 text-white cursor-pointer shadow-lg scale-105',
 
       booked:
-        'bg-gray-200 border-2 border-gray-300 text-gray-400 cursor-not-allowed',
+        'bg-red-500 border-2 border-red-600 text-white cursor-not-allowed opacity-90',
 
       reserved:
         'bg-yellow-100 border-2 border-yellow-400 text-yellow-700 cursor-not-allowed',
@@ -157,7 +156,7 @@ const SeatSelection = ({
         'bg-green-100 border-2 border-green-400 text-green-700 cursor-pointer hover:bg-green-50 hover:shadow-md'
     };
 
-    return `${base} ${styles[status]}`;
+    return `${base} ${styles[status] || styles.available}`;
   };
 
   // ==========================================================
@@ -328,7 +327,7 @@ const SeatSelection = ({
                   ].includes(status)
                 }
                 aria-label={`Seat ${seat.seatNumber}`}
-                title={`${seat.seatNumber} - ${status}`}
+                title={`${seat.seatNumber} - ${status === 'booked' ? 'Booked (unavailable)' : status}`}
               >
                 {getSeatIcon(
                   seat
@@ -359,38 +358,31 @@ const SeatSelection = ({
     const legend = [
       {
         label: 'Available',
-        className:
-          'bg-white border-gray-300'
+        className: 'bg-white border-gray-300'
       },
       {
         label: 'Selected',
-        className:
-          'bg-primary-600 border-primary-600'
+        className: 'bg-primary-600 border-primary-600'
       },
       {
         label: 'Booked',
-        className:
-          'bg-gray-200 border-gray-300'
+        className: 'bg-red-500 border-red-600'
       },
       {
         label: 'Reserved',
-        className:
-          'bg-yellow-100 border-yellow-400'
+        className: 'bg-yellow-100 border-yellow-400'
       },
       {
         label: 'Blocked',
-        className:
-          'bg-red-100 border-red-300'
+        className: 'bg-red-100 border-red-300'
       },
       {
         label: 'Monitored',
-        className:
-          'bg-secondary-100 border-secondary-400'
+        className: 'bg-secondary-100 border-secondary-400'
       },
       {
         label: 'Recommended',
-        className:
-          'bg-green-100 border-green-400'
+        className: 'bg-green-100 border-green-400'
       }
     ];
 

@@ -9,7 +9,7 @@ const notificationSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['booking', 'seat_update', 'smartseat', 'payment', 'system'],
+    enum: ['booking', 'seat_update', 'smartseat', 'payment', 'system', 'delay'],
     required: true
   },
   title: {
@@ -55,7 +55,7 @@ const notificationSchema = new mongoose.Schema({
   },
   category: {
     type: String,
-    enum: ['SmartSeat', 'Booking', 'Payment', 'System'],
+    enum: ['SmartSeat', 'Booking', 'Payment', 'System', 'Delay'],
     default: 'System'
   }
 }, {

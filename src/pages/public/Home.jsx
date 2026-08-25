@@ -1,5 +1,5 @@
 // Home page
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button, Input, Card, CardHeader, CardBody } from '../../components/common';
 import { 
@@ -132,7 +132,7 @@ const Home = () => {
                     <input
                       type="text"
                       placeholder="Departure city"
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
                       value={searchParams.from}
                       onChange={(e) => setSearchParams({...searchParams, from: e.target.value})}
                       required
@@ -147,7 +147,7 @@ const Home = () => {
                     <input
                       type="text"
                       placeholder="Destination city"
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
                       value={searchParams.to}
                       onChange={(e) => setSearchParams({...searchParams, to: e.target.value})}
                       required
@@ -161,7 +161,7 @@ const Home = () => {
                     <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <input
                       type="date"
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
                       value={searchParams.date}
                       onChange={(e) => setSearchParams({...searchParams, date: e.target.value})}
                       required

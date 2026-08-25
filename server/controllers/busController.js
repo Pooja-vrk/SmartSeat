@@ -60,15 +60,21 @@ exports.searchBuses = asyncHandler(async (req, res) => {
   };
 
   if (date) {
+    // Parse the date string as UTC midnight to match how the seed stores dates.
+    // "2026-08-25" → new Date("2026-08-25") = 2026-08-25T00:00:00.000Z
+    // Query covers the full UTC day: 00:00:00 ≤ travelDate ≤ 23:59:59
     const searchDate = new Date(date);
 
     if (!Number.isNaN(searchDate.getTime())) {
-      const nextDay = new Date(searchDate);
-      nextDay.setDate(nextDay.getDate() + 1);
+      const dayStart = new Date(searchDate);
+      dayStart.setUTCHours(0, 0, 0, 0);
+
+      const dayEnd = new Date(searchDate);
+      dayEnd.setUTCHours(23, 59, 59, 999);
 
       scheduleQuery.travelDate = {
-        $gte: searchDate,
-        $lt: nextDay
+        $gte: dayStart,
+        $lte: dayEnd
       };
     }
   }
@@ -318,33 +324,64 @@ exports.getBusSeats = asyncHandler(async (req, res) => {
     column: 1
   });
 
-  const formattedSeats = seats.map((seat) => ({
-    id: seat._id,
+  // For booked seats, fetch the associated booking to get passenger gender.
+  // This lets the frontend show gender-based seat colors without exposing
+  // any other passenger personal data.
+  const bookedSeatIds = seats
+    .filter((s) => s.status === 'booked' && s.bookingId)
+    .map((s) => s.bookingId);
 
-    seatNumber: seat.seatNumber,
+  const bookingGenderMap = {};
+  if (bookedSeatIds.length > 0) {
+    const Booking = require('../models/Booking');
+    const bookings = await Booking.find(
+      { _id: { $in: bookedSeatIds } },
+      { _id: 1, 'passengerDetails.gender': 1 }
+    ).lean();
+    bookings.forEach((b) => {
+      bookingGenderMap[b._id.toString()] =
+        b.passengerDetails?.gender || 'other';
+    });
+  }
 
-    row: seat.row,
+  const formattedSeats = seats.map((seat) => {
+    const passengerGender =
+      seat.status === 'booked' && seat.bookingId
+        ? bookingGenderMap[seat.bookingId.toString()] || 'other'
+        : null;
 
-    column: seat.column,
+    return {
+      id: seat._id,
 
-    type: seat.status,
+      seatNumber: seat.seatNumber,
 
-    price: seat.price,
+      row: seat.row,
 
-    isAisle: seat.seatType === 'aisle',
+      column: seat.column,
 
-    windowSide: seat.seatType === 'window',
+      type: seat.status,
 
-    seatType: seat.seatType,
+      price: seat.price,
 
-    position: seat.position,
+      isAisle: seat.seatType === 'aisle',
 
-    adjacentSeat:
-      Array.isArray(seat.adjacentSeatNumbers) &&
-      seat.adjacentSeatNumbers.length > 0
-        ? seat.adjacentSeatNumbers[0]
-        : null
-  }));
+      windowSide: seat.seatType === 'window',
+
+      seatType: seat.seatType,
+
+      position: seat.position,
+
+      adjacentSeat:
+        Array.isArray(seat.adjacentSeatNumbers) &&
+        seat.adjacentSeatNumbers.length > 0
+          ? seat.adjacentSeatNumbers[0]
+          : null,
+
+      // passengerGender is only present on booked seats.
+      // Values: 'male' | 'female' | 'other' | null
+      passengerGender
+    };
+  });
 
   return res.status(200).json({
     success: true,

@@ -11,7 +11,8 @@ import {
   X,
   Check,
   Filter,
-  Trash2
+  Trash2,
+  Clock
 } from 'lucide-react';
 
 const Notifications = () => {
@@ -34,16 +35,18 @@ const Notifications = () => {
 
   const getNotificationIcon = (type) => {
     switch (type) {
+      case 'delay':
+        return Clock;
       case 'adjacent_seat':
+      case 'smartseat':
         return AlertTriangle;
       case 'booking':
         return CheckCircle;
       case 'recommendation':
+      case 'seat_update':
         return Info;
       case 'payment':
         return CheckCircle;
-      case 'seat_update':
-        return Info;
       default:
         return Bell;
     }
@@ -51,16 +54,18 @@ const Notifications = () => {
 
   const getNotificationColor = (type) => {
     switch (type) {
+      case 'delay':
+        return 'text-orange-600 bg-orange-100';
       case 'adjacent_seat':
+      case 'smartseat':
         return 'text-yellow-600 bg-yellow-100';
       case 'booking':
         return 'text-green-600 bg-green-100';
       case 'recommendation':
+      case 'seat_update':
         return 'text-blue-600 bg-blue-100';
       case 'payment':
         return 'text-green-600 bg-green-100';
-      case 'seat_update':
-        return 'text-blue-600 bg-blue-100';
       default:
         return 'text-gray-600 bg-gray-100';
     }
@@ -158,7 +163,7 @@ const Notifications = () => {
               <span className="text-sm font-medium text-gray-700">Filter:</span>
             </div>
             <div className="flex space-x-2">
-              {['all', 'SmartSeat', 'Booking', 'Payment', 'System'].map(category => (
+              {['all', 'SmartSeat', 'Booking', 'Payment', 'Delay', 'System'].map(category => (
                 <button
                   key={category}
                   onClick={() => setFilter(category)}
