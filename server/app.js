@@ -17,6 +17,11 @@ const userRoutes = require('./routes/users');
 
 const app = express();
 
+// Version probe — lets us confirm the deployed commit
+app.get('/api/version', (req, res) => {
+  res.json({ version: 'v2-null-safe-admin', commit: '21996f2' });
+});
+
 // ============================================================
 // DATABASE
 // ============================================================

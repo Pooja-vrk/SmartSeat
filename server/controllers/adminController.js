@@ -1,3 +1,4 @@
+
 const Bus = require('../models/Bus');
 const Schedule = require('../models/Schedule');
 const Route = require('../models/Route');
@@ -7,49 +8,101 @@ const Notification = require('../models/Notification');
 const SeatChangeHistory = require('../models/SeatChangeHistory');
 const asyncHandler = require('../utils/asyncHandler');
 
-/**
- * Normalise a Bus Mongoose document into the shape AdminBuses.jsx expects.
- *
- * AdminBuses.jsx reads:
- *   bus.id, bus.operator, bus.busNumber, bus.busType,
- *   bus.route.from, bus.route.to,
- *   bus.totalSeats, bus.status
- */
+/*
+|--------------------------------------------------------------------------
+| Helper: Safely get a value
+|--------------------------------------------------------------------------
+*/
+
+const safeString = (value, fallback = '') => {
+  if (value === null || value === undefined || value === '') {
+    return fallback;
+  }
+
+  return String(value);
+};
+
+/*
+|--------------------------------------------------------------------------
+| Helper: Format Bus for frontend
+|--------------------------------------------------------------------------
+*/
+
 function formatBusForFrontend(bus) {
+  if (!bus) {
+    return null;
+  }
+
   const doc = bus.toObject ? bus.toObject() : bus;
+
   return {
-    id:         doc._id,
-    _id:        doc._id,
-    operator:   doc.operatorName,
-    operatorName: doc.operatorName,
-    busNumber:  doc.busNumber,
-    busType:    doc.busType,
-    registrationNumber: doc.registrationNumber,
+    id: doc._id,
+    _id: doc._id,
+
+    operator: doc.operatorName || '',
+    operatorName: doc.operatorName || '',
+
+    busNumber: doc.busNumber || '',
+    busType: doc.busType || '',
+
+    registrationNumber: doc.registrationNumber || '',
+
     route: {
       from: doc.boardingPoints?.[0] || '',
-      to:   doc.droppingPoints?.[0] || ''
+      to: doc.droppingPoints?.[0] || ''
     },
+
     totalSeats: doc.seatConfiguration?.totalSeats || 0,
-    seatConfiguration: doc.seatConfiguration,
-    amenities:  doc.amenities || [],
-    boardingPoints: doc.boardingPoints || [],
-    droppingPoints: doc.droppingPoints || [],
-    status:     doc.isActive ? 'active' : 'inactive',
-    isActive:   doc.isActive,
-    rating:     doc.rating,
-    createdAt:  doc.createdAt
+
+    seatConfiguration: doc.seatConfiguration || {
+      rows: 0,
+      columns: 0,
+      aisleAfter: 0,
+      totalSeats: 0
+    },
+
+    amenities: Array.isArray(doc.amenities)
+      ? doc.amenities
+      : [],
+
+    boardingPoints: Array.isArray(doc.boardingPoints)
+      ? doc.boardingPoints
+      : [],
+
+    droppingPoints: Array.isArray(doc.droppingPoints)
+      ? doc.droppingPoints
+      : [],
+
+    status: doc.isActive ? 'active' : 'inactive',
+    isActive: Boolean(doc.isActive),
+
+    rating: doc.rating || 0,
+
+    createdAt: doc.createdAt || null
   };
 }
 
-/**
- * @desc    Get admin dashboard data
- * @route   GET /api/admin/dashboard
- * @access  Private/Admin
- */
+/*
+|--------------------------------------------------------------------------
+| ADMIN DASHBOARD
+|--------------------------------------------------------------------------
+|
+| GET /api/admin/dashboard
+| Private/Admin
+|
+*/
+
 exports.getDashboard = asyncHandler(async (req, res, next) => {
+  /*
+   * Start of today
+   */
   const today = new Date();
+
   today.setHours(0, 0, 0, 0);
 
+  /*
+   * Run independent database queries in parallel.
+   */
   const [
     totalBuses,
     activeBuses,
@@ -63,111 +116,411 @@ exports.getDashboard = asyncHandler(async (req, res, next) => {
     recentNotifications,
     popularRoutes
   ] = await Promise.all([
+    /*
+     * Bus statistics
+     */
     Bus.countDocuments(),
-    Bus.countDocuments({ isActive: true }),
-    User.countDocuments({ role: 'passenger' }),
-    Booking.countDocuments({ createdAt: { $gte: today } }),
-    Booking.countDocuments({ bookingStatus: 'confirmed' }),
-    Booking.countDocuments({ bookingStatus: 'cancelled' }),
+
+    Bus.countDocuments({
+      isActive: true
+    }),
+
+    /*
+     * Passenger statistics
+     */
+    User.countDocuments({
+      role: 'passenger'
+    }),
+
+    /*
+     * Today's bookings
+     */
+    Booking.countDocuments({
+      createdAt: {
+        $gte: today
+      }
+    }),
+
+    /*
+     * Confirmed bookings
+     */
+    Booking.countDocuments({
+      bookingStatus: 'confirmed'
+    }),
+
+    /*
+     * Cancelled bookings
+     */
+    Booking.countDocuments({
+      bookingStatus: 'cancelled'
+    }),
+
+    /*
+     * Seat changes
+     */
     SeatChangeHistory.countDocuments(),
-    Notification.countDocuments({ type: 'adjacent_seat' }),
+
+    /*
+     * Smart seat notifications
+     */
+    Notification.countDocuments({
+      type: 'adjacent_seat'
+    }),
+
+    /*
+     * Recent bookings
+     *
+     * IMPORTANT:
+     * We use lean() so the result is plain objects.
+     */
     Booking.find()
-      .populate('userId', 'name email')
-      .populate('busId', 'busNumber')
-      .sort({ createdAt: -1 })
-      .limit(5),
+      .populate({
+        path: 'userId',
+        select: 'name email',
+        options: {
+          strictPopulate: false
+        }
+      })
+      .populate({
+        path: 'busId',
+        select: 'busNumber operatorName',
+        options: {
+          strictPopulate: false
+        }
+      })
+      .sort({
+        createdAt: -1
+      })
+      .limit(5)
+      .lean(),
+
+    /*
+     * Recent notifications
+     *
+     * userId may be null if the referenced user was deleted.
+     * We handle that below.
+     */
     Notification.find()
-      .populate('userId', 'name')
-      .sort({ createdAt: -1 })
-      .limit(5),
+      .populate({
+        path: 'userId',
+        select: 'name email',
+        options: {
+          strictPopulate: false
+        }
+      })
+      .sort({
+        createdAt: -1
+      })
+      .limit(5)
+      .lean(),
+
+    /*
+     * Popular routes
+     */
     Booking.aggregate([
+      {
+        $match: {
+          routeId: {
+            $ne: null
+          }
+        }
+      },
+
       {
         $group: {
           _id: '$routeId',
-          bookings: { $sum: 1 },
-          revenue: { $sum: '$fare' }
+
+          bookings: {
+            $sum: 1
+          },
+
+          revenue: {
+            $sum: {
+              $ifNull: ['$fare', 0]
+            }
+          }
         }
       },
-      { $sort: { bookings: -1 } },
-      { $limit: 5 }
+
+      {
+        $sort: {
+          bookings: -1
+        }
+      },
+
+      {
+        $limit: 5
+      }
     ])
   ]);
 
-  const routePerformance = await Route.populate(popularRoutes, { path: '_id', model: 'Route' });
+  /*
+  |--------------------------------------------------------------------------
+  | Populate routes safely
+  |--------------------------------------------------------------------------
+  */
 
-  res.status(200).json({
+  let routePerformance = [];
+
+  if (Array.isArray(popularRoutes) && popularRoutes.length > 0) {
+    try {
+      routePerformance = await Route.populate(popularRoutes, {
+        path: '_id',
+        model: 'Route'
+      });
+    } catch (routeError) {
+      console.error(
+        'Dashboard route population error:',
+        routeError.message
+      );
+
+      /*
+       * Do not fail the complete dashboard just because
+       * one route reference is invalid.
+       */
+      routePerformance = popularRoutes;
+    }
+  }
+
+  /*
+  |--------------------------------------------------------------------------
+  | Format recent bookings
+  |--------------------------------------------------------------------------
+  */
+
+  const formattedRecentBookings = Array.isArray(recentBookings)
+    ? recentBookings.map((booking) => {
+        /*
+         * userId can be null.
+         */
+        const userName =
+          booking?.userId?.name ||
+          booking?.passengerDetails?.name ||
+          'Unknown Passenger';
+
+        /*
+         * busId can be null.
+         */
+        const busNumber =
+          booking?.busId?.busNumber ||
+          'Unknown Bus';
+
+        return {
+          id:
+            booking?.bookingId ||
+            booking?._id ||
+            null,
+
+          passenger: userName,
+
+          bus: busNumber,
+
+          seat:
+            booking?.seatNumber ||
+            'N/A',
+
+          amount:
+            Number(booking?.fare) || 0,
+
+          status:
+            booking?.bookingStatus ||
+            'unknown',
+
+          createdAt:
+            booking?.createdAt ||
+            null
+        };
+      })
+    : [];
+
+  /*
+  |--------------------------------------------------------------------------
+  | Format recent notifications
+  |--------------------------------------------------------------------------
+  */
+
+  const formattedRecentNotifications =
+    Array.isArray(recentNotifications)
+      ? recentNotifications.map((notification) => {
+          /*
+           * IMPORTANT:
+           *
+           * notification.userId may be null.
+           *
+           * NEVER do:
+           *
+           * notification.userId.name
+           *
+           * because that causes:
+           *
+           * Cannot read properties of null (reading 'name')
+           */
+
+          const recipientName =
+            (notification?.userId && notification.userId.name) ||
+            (notification?.userId && notification.userId.email) ||
+            'Unknown User';
+
+          return {
+            id:
+              notification?._id ||
+              null,
+
+            recipient:
+              recipientName,
+
+            message:
+              notification?.message ||
+              '',
+
+            type:
+              notification?.type ||
+              'general',
+
+            read:
+              Boolean(notification?.read),
+
+            time:
+              notification?.createdAt ||
+              null
+          };
+        })
+      : [];
+
+  /*
+  |--------------------------------------------------------------------------
+  | Format popular routes
+  |--------------------------------------------------------------------------
+  */
+
+  const formattedPopularRoutes =
+    Array.isArray(routePerformance)
+      ? routePerformance
+          .filter((route) => route)
+          .map((route) => {
+            /*
+             * After Route.populate(), route._id may be:
+             *
+             * 1. A Route document
+             * 2. null
+             * 3. An ObjectId
+             *
+             * Handle all cases safely.
+             */
+
+            const routeDocument =
+              route?._id &&
+              typeof route._id === 'object' &&
+              (
+                route._id.source !== undefined ||
+                route._id.destination !== undefined
+              )
+                ? route._id
+                : null;
+
+            return {
+              from:
+                routeDocument?.source ||
+                'Unknown',
+
+              to:
+                routeDocument?.destination ||
+                'Unknown',
+
+              bookings:
+                Number(route?.bookings) || 0,
+
+              revenue:
+                Number(route?.revenue) || 0
+            };
+          })
+      : [];
+
+  /*
+  |--------------------------------------------------------------------------
+  | Final dashboard response
+  |--------------------------------------------------------------------------
+  */
+
+  return res.status(200).json({
     success: true,
+
     data: {
       overview: {
-        totalBuses,
-        activeBuses,
-        totalPassengers,
-        todayBookings,
-        confirmedBookings,
-        cancelledBookings,
-        seatChanges,
-        smartSeatNotifications
+        totalBuses:
+          Number(totalBuses) || 0,
+
+        activeBuses:
+          Number(activeBuses) || 0,
+
+        totalPassengers:
+          Number(totalPassengers) || 0,
+
+        todayBookings:
+          Number(todayBookings) || 0,
+
+        confirmedBookings:
+          Number(confirmedBookings) || 0,
+
+        cancelledBookings:
+          Number(cancelledBookings) || 0,
+
+        seatChanges:
+          Number(seatChanges) || 0,
+
+        smartSeatNotifications:
+          Number(smartSeatNotifications) || 0
       },
-      recentBookings: recentBookings.map(b => ({
-        id: b.bookingId,
-        passenger: b.userId.name,
-        bus: b.busId.busNumber,
-        seat: b.seatNumber,
-        amount: b.fare,
-        status: b.bookingStatus,
-        createdAt: b.createdAt
-      })),
-      recentNotifications: recentNotifications.map(n => ({
-        id: n._id,
-        recipient: n.userId.name,
-        message: n.message,
-        type: n.type,
-        read: n.read,
-        time: n.createdAt
-      })),
-      popularRoutes: routePerformance.map(r => ({
-        from: r._id.source,
-        to: r._id.destination,
-        bookings: r.bookings,
-        revenue: r.revenue
-      }))
+
+      recentBookings:
+        formattedRecentBookings,
+
+      recentNotifications:
+        formattedRecentNotifications,
+
+      popularRoutes:
+        formattedPopularRoutes
     }
   });
 });
 
-/**
- * @desc    Get all buses (admin)
- * @route   GET /api/admin/buses
- * @access  Private/Admin
- */
+/*
+|--------------------------------------------------------------------------
+| GET ALL BUSES
+|--------------------------------------------------------------------------
+|
+| GET /api/admin/buses
+|
+*/
+
 exports.getBuses = asyncHandler(async (req, res, next) => {
-  const buses = await Bus.find().sort({ createdAt: -1 });
+  const buses = await Bus.find()
+    .sort({
+      createdAt: -1
+    });
 
   res.status(200).json({
     success: true,
-    data: buses.map(formatBusForFrontend)
+
+    data: buses
+      .map(formatBusForFrontend)
+      .filter(Boolean)
   });
 });
 
-/**
- * @desc    Create bus
- * @route   POST /api/admin/buses
- * @access  Private/Admin
- *
- * Frontend sends:
- *   { operator, busNumber, busType, registrationNumber,
- *     route: { from, to },
- *     totalSeats, rows, columns, aisleAfter,
- *     amenities, boardingPoints, droppingPoints }
- *
- * Bus model requires:
- *   operatorName, busNumber, busType, registrationNumber,
- *   seatConfiguration: { rows, columns, aisleAfter, totalSeats }
- */
+/*
+|--------------------------------------------------------------------------
+| CREATE BUS
+|--------------------------------------------------------------------------
+|
+| POST /api/admin/buses
+|
+*/
+
 exports.createBus = asyncHandler(async (req, res, next) => {
   const {
     operator,
-    operatorName,          // accept both spellings
+    operatorName,
     busNumber,
     busType,
     registrationNumber,
@@ -176,15 +529,20 @@ exports.createBus = asyncHandler(async (req, res, next) => {
     rows,
     columns,
     aisleAfter,
-    seatLayout,            // legacy key from older frontend versions
-    seatConfiguration,     // direct model key also accepted
+    seatLayout,
+    seatConfiguration,
     amenities,
     boardingPoints,
     droppingPoints
   } = req.body;
 
-  // Resolve operator name (frontend sends 'operator', model expects 'operatorName')
-  const resolvedOperatorName = operatorName || operator;
+  /*
+   * Resolve operator name.
+   */
+  const resolvedOperatorName =
+    operatorName ||
+    operator;
+
   if (!resolvedOperatorName) {
     return res.status(400).json({
       success: false,
@@ -192,103 +550,265 @@ exports.createBus = asyncHandler(async (req, res, next) => {
     });
   }
 
-  // Resolve seat configuration — frontend may send seatLayout or seatConfiguration
-  const seatSrc = seatConfiguration || seatLayout || {};
-  const resolvedRows       = Number(seatSrc.rows       || rows       || 10);
-  const resolvedColumns    = Number(seatSrc.columns    || columns    || 4);
-  const resolvedAisleAfter = Number(seatSrc.aisleAfter || aisleAfter || 2);
-  const resolvedTotalSeats = Number(seatSrc.totalSeats || totalSeats || (resolvedRows * resolvedColumns));
+  /*
+   * Resolve seat configuration.
+   */
+  const seatSrc =
+    seatConfiguration ||
+    seatLayout ||
+    {};
 
-  if (!resolvedTotalSeats || resolvedTotalSeats < 1) {
+  const resolvedRows =
+    Number(
+      seatSrc.rows ||
+      rows ||
+      10
+    );
+
+  const resolvedColumns =
+    Number(
+      seatSrc.columns ||
+      columns ||
+      4
+    );
+
+  const resolvedAisleAfter =
+    Number(
+      seatSrc.aisleAfter ||
+      aisleAfter ||
+      2
+    );
+
+  const resolvedTotalSeats =
+    Number(
+      seatSrc.totalSeats ||
+      totalSeats ||
+      (
+        resolvedRows *
+        resolvedColumns
+      )
+    );
+
+  if (
+    !resolvedTotalSeats ||
+    resolvedTotalSeats < 1
+  ) {
     return res.status(400).json({
       success: false,
       message: 'Total seats must be a positive number'
     });
   }
 
-  // Auto-generate a registrationNumber if not provided
-  // Format: REG-<BusNumber>-<timestamp-suffix> — ensures uniqueness
+  /*
+   * Registration number.
+   */
   const resolvedRegNumber =
     registrationNumber ||
-    `REG-${(busNumber || '').replace(/[^A-Z0-9]/gi, '').toUpperCase()}-${Date.now().toString().slice(-6)}`;
+    `REG-${(busNumber || '')
+      .replace(/[^A-Z0-9]/gi, '')
+      .toUpperCase()}-${Date.now()
+      .toString()
+      .slice(-6)}`;
 
+  /*
+   * Create bus data.
+   */
   const busData = {
-    operatorName: resolvedOperatorName,
+    operatorName:
+      resolvedOperatorName,
+
     busNumber,
+
     busType,
-    registrationNumber: resolvedRegNumber,
+
+    registrationNumber:
+      resolvedRegNumber,
+
     seatConfiguration: {
-      rows:       resolvedRows,
-      columns:    resolvedColumns,
-      aisleAfter: resolvedAisleAfter,
-      totalSeats: resolvedTotalSeats
+      rows:
+        resolvedRows,
+
+      columns:
+        resolvedColumns,
+
+      aisleAfter:
+        resolvedAisleAfter,
+
+      totalSeats:
+        resolvedTotalSeats
     },
-    amenities:       Array.isArray(amenities)       ? amenities       : ['WiFi', 'USB Charging', 'Water Bottle'],
-    boardingPoints:  Array.isArray(boardingPoints)  ? boardingPoints  : (route?.from ? [route.from]  : []),
-    droppingPoints:  Array.isArray(droppingPoints)  ? droppingPoints  : (route?.to   ? [route.to]    : []),
+
+    amenities:
+      Array.isArray(amenities)
+        ? amenities
+        : [
+            'WiFi',
+            'USB Charging',
+            'Water Bottle'
+          ],
+
+    boardingPoints:
+      Array.isArray(boardingPoints)
+        ? boardingPoints
+        : route?.from
+          ? [route.from]
+          : [],
+
+    droppingPoints:
+      Array.isArray(droppingPoints)
+        ? droppingPoints
+        : route?.to
+          ? [route.to]
+          : [],
+
     isActive: true
   };
 
   try {
-    const bus = await Bus.create(busData);
+    const bus =
+      await Bus.create(busData);
 
     res.status(201).json({
       success: true,
-      message: 'Bus created successfully',
-      data: formatBusForFrontend(bus)
+
+      message:
+        'Bus created successfully',
+
+      data:
+        formatBusForFrontend(bus)
     });
   } catch (err) {
-    // Surface Mongoose validation errors clearly
+    /*
+     * Validation error
+     */
     if (err.name === 'ValidationError') {
-      const messages = Object.values(err.errors).map((e) => e.message);
+      const messages =
+        Object.values(err.errors)
+          .map((e) => e.message);
+
       return res.status(400).json({
         success: false,
-        message: messages.join('; ')
+        message:
+          messages.join('; ')
       });
     }
-    // Duplicate key (busNumber or registrationNumber already exists)
+
+    /*
+     * Duplicate key
+     */
     if (err.code === 11000) {
-      const field = Object.keys(err.keyValue || {})[0] || 'field';
+      const field =
+        Object.keys(
+          err.keyValue || {}
+        )[0] || 'field';
+
       return res.status(409).json({
         success: false,
-        message: `A bus with this ${field === 'busNumber' ? 'bus number' : 'registration number'} already exists`
+
+        message:
+          `A bus with this ${
+            field === 'busNumber'
+              ? 'bus number'
+              : 'registration number'
+          } already exists`
       });
     }
+
     throw err;
   }
 });
 
-/**
- * @desc    Update bus
- * @route   PATCH /api/admin/buses/:id
- * @access  Private/Admin
- */
+/*
+|--------------------------------------------------------------------------
+| UPDATE BUS
+|--------------------------------------------------------------------------
+|
+| PATCH /api/admin/buses/:id
+|
+*/
+
 exports.updateBus = asyncHandler(async (req, res, next) => {
-  // Translate frontend field names to model field names
-  const { operator, operatorName, seatLayout, seatConfiguration, totalSeats, ...rest } = req.body;
+  const {
+    operator,
+    operatorName,
+    seatLayout,
+    seatConfiguration,
+    totalSeats,
+    ...rest
+  } = req.body;
 
-  const updateFields = { ...rest };
+  const updateFields = {
+    ...rest
+  };
 
+  /*
+   * Operator name
+   */
   if (operator || operatorName) {
-    updateFields.operatorName = operatorName || operator;
+    updateFields.operatorName =
+      operatorName ||
+      operator;
   }
 
-  if (seatLayout || seatConfiguration || totalSeats) {
-    const seatSrc = seatConfiguration || seatLayout || {};
-    const existing = await Bus.findById(req.params.id).lean();
+  /*
+   * Seat configuration
+   */
+  if (
+    seatLayout ||
+    seatConfiguration ||
+    totalSeats
+  ) {
+    const seatSrc =
+      seatConfiguration ||
+      seatLayout ||
+      {};
+
+    const existing =
+      await Bus.findById(
+        req.params.id
+      ).lean();
+
     updateFields.seatConfiguration = {
-      rows:       Number(seatSrc.rows       || existing?.seatConfiguration?.rows       || 10),
-      columns:    Number(seatSrc.columns    || existing?.seatConfiguration?.columns    || 4),
-      aisleAfter: Number(seatSrc.aisleAfter || existing?.seatConfiguration?.aisleAfter || 2),
-      totalSeats: Number(seatSrc.totalSeats || totalSeats || existing?.seatConfiguration?.totalSeats || 40)
+      rows:
+        Number(
+          seatSrc.rows ||
+          existing?.seatConfiguration?.rows ||
+          10
+        ),
+
+      columns:
+        Number(
+          seatSrc.columns ||
+          existing?.seatConfiguration?.columns ||
+          4
+        ),
+
+      aisleAfter:
+        Number(
+          seatSrc.aisleAfter ||
+          existing?.seatConfiguration?.aisleAfter ||
+          2
+        ),
+
+      totalSeats:
+        Number(
+          seatSrc.totalSeats ||
+          totalSeats ||
+          existing?.seatConfiguration?.totalSeats ||
+          40
+        )
     };
   }
 
-  const bus = await Bus.findByIdAndUpdate(
-    req.params.id,
-    updateFields,
-    { new: true, runValidators: true }
-  );
+  const bus =
+    await Bus.findByIdAndUpdate(
+      req.params.id,
+      updateFields,
+      {
+        new: true,
+        runValidators: true
+      }
+    );
 
   if (!bus) {
     return res.status(404).json({
@@ -299,18 +819,29 @@ exports.updateBus = asyncHandler(async (req, res, next) => {
 
   res.status(200).json({
     success: true,
-    message: 'Bus updated successfully',
-    data: formatBusForFrontend(bus)
+
+    message:
+      'Bus updated successfully',
+
+    data:
+      formatBusForFrontend(bus)
   });
 });
 
-/**
- * @desc    Delete bus
- * @route   DELETE /api/admin/buses/:id
- * @access  Private/Admin
- */
+/*
+|--------------------------------------------------------------------------
+| DELETE BUS
+|--------------------------------------------------------------------------
+|
+| DELETE /api/admin/buses/:id
+|
+*/
+
 exports.deleteBus = asyncHandler(async (req, res, next) => {
-  const bus = await Bus.findByIdAndDelete(req.params.id);
+  const bus =
+    await Bus.findByIdAndDelete(
+      req.params.id
+    );
 
   if (!bus) {
     return res.status(404).json({
@@ -325,33 +856,96 @@ exports.deleteBus = asyncHandler(async (req, res, next) => {
   });
 });
 
-/**
- * @desc    Get all bookings (admin)
- * @route   GET /api/admin/bookings
- * @access  Private/Admin
- */
+/*
+|--------------------------------------------------------------------------
+| GET ALL BOOKINGS
+|--------------------------------------------------------------------------
+|
+| GET /api/admin/bookings
+|
+*/
+
 exports.getBookings = asyncHandler(async (req, res, next) => {
-  const { status } = req.query;
+  const {
+    status
+  } = req.query;
 
   const query = {};
-  if (status) query.bookingStatus = status;
 
-  const bookings = await Booking.find(query)
-    .populate('userId', 'name email phone')
-    .populate('busId', 'busNumber operatorName')
-    .populate('scheduleId', 'travelDate departureTime')
-    .sort({ createdAt: -1 });
+  if (status) {
+    query.bookingStatus =
+      status;
+  }
 
-  const formattedBookings = bookings.map(b => ({
-    id: b.bookingId,
-    passengerName: b.passengerDetails.name,
-    busNumber: b.busId.busNumber,
-    seat: b.seatNumber,
-    date: b.scheduleId?.travelDate?.toISOString().split('T')[0] || 'N/A',
-    amount: b.fare,
-    status: b.bookingStatus,
-    smartSeatMonitoring: b.smartSeatMonitoring
-  }));
+  const bookings =
+    await Booking.find(query)
+      .populate({
+        path: 'userId',
+        select: 'name email phone',
+        options: {
+          strictPopulate: false
+        }
+      })
+      .populate({
+        path: 'busId',
+        select: 'busNumber operatorName',
+        options: {
+          strictPopulate: false
+        }
+      })
+      .populate({
+        path: 'scheduleId',
+        select: 'travelDate departureTime',
+        options: {
+          strictPopulate: false
+        }
+      })
+      .sort({
+        createdAt: -1
+      })
+      .lean();
+
+  const formattedBookings =
+    bookings.map((b) => ({
+      id:
+        b?.bookingId ||
+        b?._id ||
+        null,
+
+      passengerName:
+        b?.passengerDetails?.name ||
+        b?.userId?.name ||
+        'Unknown Passenger',
+
+      busNumber:
+        b?.busId?.busNumber ||
+        'Unknown Bus',
+
+      seat:
+        b?.seatNumber ||
+        'N/A',
+
+      date:
+        b?.scheduleId?.travelDate
+          ? new Date(
+              b.scheduleId.travelDate
+            )
+              .toISOString()
+              .split('T')[0]
+          : 'N/A',
+
+      amount:
+        Number(b?.fare) || 0,
+
+      status:
+        b?.bookingStatus ||
+        'unknown',
+
+      smartSeatMonitoring:
+        Boolean(
+          b?.smartSeatMonitoring
+        )
+    }));
 
   res.status(200).json({
     success: true,
@@ -359,34 +953,76 @@ exports.getBookings = asyncHandler(async (req, res, next) => {
   });
 });
 
-/**
- * @desc    Get all passengers (admin)
- * @route   GET /api/admin/passengers
- * @access  Private/Admin
- */
+/*
+|--------------------------------------------------------------------------
+| GET ALL PASSENGERS
+|--------------------------------------------------------------------------
+|
+| GET /api/admin/passengers
+|
+*/
+
 exports.getPassengers = asyncHandler(async (req, res, next) => {
-  const passengers = await User.find({ role: 'passenger' })
-    .select('-password')
-    .sort({ createdAt: -1 });
+  const passengers =
+    await User.find({
+      role: 'passenger'
+    })
+      .select('-password')
+      .sort({
+        createdAt: -1
+      })
+      .lean();
 
-  const formattedPassengers = await Promise.all(passengers.map(async (p) => {
-    const bookingCount = await Booking.countDocuments({ userId: p._id });
-    const activeBookingCount = await Booking.countDocuments({ 
-      userId: p._id, 
-      bookingStatus: 'confirmed' 
-    });
+  const formattedPassengers =
+    await Promise.all(
+      passengers.map(
+        async (p) => {
+          const [
+            bookingCount,
+            activeBookingCount
+          ] = await Promise.all([
+            Booking.countDocuments({
+              userId: p._id
+            }),
 
-    return {
-      id: p._id,
-      name: p.name,
-      email: p.email,
-      phone: p.phone,
-      totalBookings: bookingCount,
-      activeBookings: activeBookingCount,
-      smartSeatEnabled: true, // Will be updated with preference check
-      createdAt: p.createdAt
-    };
-  }));
+            Booking.countDocuments({
+              userId: p._id,
+              bookingStatus: 'confirmed'
+            })
+          ]);
+
+          return {
+            id:
+              p._id,
+
+            name:
+              p?.name ||
+              'Unknown Passenger',
+
+            email:
+              p?.email ||
+              '',
+
+            phone:
+              p?.phone ||
+              '',
+
+            totalBookings:
+              bookingCount || 0,
+
+            activeBookings:
+              activeBookingCount || 0,
+
+            smartSeatEnabled:
+              true,
+
+            createdAt:
+              p?.createdAt ||
+              null
+          };
+        }
+      )
+    );
 
   res.status(200).json({
     success: true,
@@ -394,31 +1030,96 @@ exports.getPassengers = asyncHandler(async (req, res, next) => {
   });
 });
 
-/**
- * @desc    Get notifications (admin)
- * @route   GET /api/admin/notifications
- * @access  Private/Admin
- */
+/*
+|--------------------------------------------------------------------------
+| GET NOTIFICATIONS
+|--------------------------------------------------------------------------
+|
+| GET /api/admin/notifications
+|
+*/
+
 exports.getNotifications = asyncHandler(async (req, res, next) => {
-  const { type, read } = req.query;
+  const {
+    type,
+    read
+  } = req.query;
 
   const query = {};
-  if (type) query.type = type;
-  if (read !== undefined) query.read = read === 'true';
 
-  const notifications = await Notification.find(query)
-    .populate('userId', 'name email')
-    .sort({ createdAt: -1 })
-    .limit(50);
+  if (type) {
+    query.type = type;
+  }
 
-  const formattedNotifications = notifications.map(n => ({
-    id: n._id,
-    type: n.type,
-    recipient: n.userId.name,
-    message: n.message,
-    read: n.read,
-    time: n.createdAt
-  }));
+  if (read !== undefined) {
+    query.read =
+      read === 'true';
+  }
+
+  const notifications =
+    await Notification.find(query)
+      .populate({
+        path: 'userId',
+        select: 'name email',
+        options: {
+          strictPopulate: false
+        }
+      })
+      .sort({
+        createdAt: -1
+      })
+      .limit(50)
+      .lean();
+
+  /*
+   * IMPORTANT:
+   *
+   * userId can be null.
+   */
+  const formattedNotifications =
+    notifications.map((n) => {
+      try {
+        return {
+          id:
+            n?._id ||
+            null,
+
+          type:
+            n?.type ||
+            'general',
+
+          recipient:
+            (n?.userId && n.userId.name) ||
+            (n?.userId && n.userId.email) ||
+            'Unknown User',
+
+          message:
+            n?.message ||
+            '',
+
+          read:
+            Boolean(n?.read),
+
+          time:
+            n?.createdAt ||
+            null
+        };
+      } catch (mapErr) {
+        console.error(
+          '[getNotifications] Failed to map notification',
+          n?._id,
+          mapErr.message
+        );
+        return {
+          id: n?._id || null,
+          type: n?.type || 'general',
+          recipient: 'Unknown User',
+          message: n?.message || '',
+          read: Boolean(n?.read),
+          time: n?.createdAt || null
+        };
+      }
+    });
 
   res.status(200).json({
     success: true,
@@ -426,175 +1127,447 @@ exports.getNotifications = asyncHandler(async (req, res, next) => {
   });
 });
 
-/**
- * @desc    Get analytics (admin)
- * @route   GET /api/admin/analytics
- * @access  Private/Admin
- */
+/*
+|--------------------------------------------------------------------------
+| GET ANALYTICS
+|--------------------------------------------------------------------------
+|
+| GET /api/admin/analytics
+|
+*/
+
 exports.getAnalytics = asyncHandler(async (req, res, next) => {
-  const { period = 'month' } = req.query;
+  const {
+    period = 'month'
+  } = req.query;
 
   let startDate;
-  const now = new Date();
+
+  const now =
+    new Date();
 
   switch (period) {
     case 'week':
-      startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      startDate =
+        new Date(
+          now.getTime() -
+          7 *
+            24 *
+            60 *
+            60 *
+            1000
+        );
       break;
+
     case 'month':
-      startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      startDate =
+        new Date(
+          now.getTime() -
+          30 *
+            24 *
+            60 *
+            60 *
+            1000
+        );
       break;
+
     case 'quarter':
-      startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+      startDate =
+        new Date(
+          now.getTime() -
+          90 *
+            24 *
+            60 *
+            60 *
+            1000
+        );
       break;
+
     case 'year':
-      startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+      startDate =
+        new Date(
+          now.getTime() -
+          365 *
+            24 *
+            60 *
+            60 *
+            1000
+        );
       break;
+
     default:
-      startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      startDate =
+        new Date(
+          now.getTime() -
+          30 *
+            24 *
+            60 *
+            60 *
+            1000
+        );
   }
 
-  const [bookings, bookingsData, smartSeatData] = await Promise.all([
-    Booking.countDocuments({ createdAt: { $gte: startDate } }),
+  const [
+    bookings,
+    bookingsData,
+    smartSeatData
+  ] = await Promise.all([
+    Booking.countDocuments({
+      createdAt: {
+        $gte: startDate
+      }
+    }),
+
     Booking.aggregate([
-      { $match: { createdAt: { $gte: startDate } } },
+      {
+        $match: {
+          createdAt: {
+            $gte: startDate
+          }
+        }
+      },
+
       {
         $group: {
           _id: null,
-          revenue: { $sum: '$fare' },
-          seatChanges: { $sum: { $cond: [{ $eq: ['$metadata.seatChange', true] }, 1, 0] } }
+
+          revenue: {
+            $sum: {
+              $ifNull: ['$fare', 0]
+            }
+          },
+
+          seatChanges: {
+            $sum: {
+              $cond: [
+                {
+                  $eq: [
+                    '$metadata.seatChange',
+                    true
+                  ]
+                },
+                1,
+                0
+              ]
+            }
+          }
         }
       }
     ]),
+
     Booking.aggregate([
-      { $match: { createdAt: { $gte: startDate }, smartSeatMonitoring: true } },
-      { $count: 'smartSeatBookings' }
+      {
+        $match: {
+          createdAt: {
+            $gte: startDate
+          },
+
+          smartSeatMonitoring:
+            true
+        }
+      },
+
+      {
+        $count:
+          'smartSeatBookings'
+      }
     ])
   ]);
 
-  const totalRevenue = bookingsData[0]?.revenue || 0;
-  const seatChanges = bookingsData[0]?.seatChanges || 0;
-  const smartSeatBookings = smartSeatData[0]?.smartSeatBookings || 0;
+  const totalRevenue =
+    bookingsData[0]?.revenue ||
+    0;
 
-  // Get passenger growth
-  const previousPeriodStart = new Date(startDate.getTime() - (now.getTime() - startDate.getTime()));
-  const [currentPassengers, previousPassengers] = await Promise.all([
-    User.countDocuments({ 
-      role: 'passenger', 
-      createdAt: { $gte: startDate } 
+  const seatChanges =
+    bookingsData[0]?.seatChanges ||
+    0;
+
+  const smartSeatBookings =
+    smartSeatData[0]
+      ?.smartSeatBookings ||
+    0;
+
+  /*
+   * Passenger growth
+   */
+  const previousPeriodStart =
+    new Date(
+      startDate.getTime() -
+      (
+        now.getTime() -
+        startDate.getTime()
+      )
+    );
+
+  const [
+    currentPassengers,
+    previousPassengers
+  ] = await Promise.all([
+    User.countDocuments({
+      role: 'passenger',
+
+      createdAt: {
+        $gte: startDate
+      }
     }),
-    User.countDocuments({ 
-      role: 'passenger', 
-      createdAt: { $gte: previousPeriodStart, $lt: startDate } 
+
+    User.countDocuments({
+      role: 'passenger',
+
+      createdAt: {
+        $gte: previousPeriodStart,
+
+        $lt: startDate
+      }
     })
   ]);
 
-  const passengerGrowth = previousPassengers > 0 
-    ? Math.round(((currentPassengers - previousPassengers) / previousPassengers) * 100)
-    : 0;
+  const passengerGrowth =
+    previousPassengers > 0
+      ? Math.round(
+          (
+            (
+              currentPassengers -
+              previousPassengers
+            ) /
+            previousPassengers
+          ) *
+            100
+        )
+      : 0;
 
-  const smartSeatAdoption = bookings > 0 
-    ? Math.round((smartSeatBookings / bookings) * 100)
-    : 0;
+  const smartSeatAdoption =
+    bookings > 0
+      ? Math.round(
+          (
+            smartSeatBookings /
+            bookings
+          ) *
+            100
+        )
+      : 0;
 
-  // Get route performance
-  const routeData = await Booking.aggregate([
-    { $match: { createdAt: { $gte: startDate } } },
-    {
-      $group: {
-        _id: '$routeId',
-        bookings: { $sum: 1 },
-        revenue: { $sum: '$fare' }
+  /*
+   * Route performance
+   */
+  const routeData =
+    await Booking.aggregate([
+      {
+        $match: {
+          createdAt: {
+            $gte: startDate
+          },
+
+          routeId: {
+            $ne: null
+          }
+        }
+      },
+
+      {
+        $group: {
+          _id: '$routeId',
+
+          bookings: {
+            $sum: 1
+          },
+
+          revenue: {
+            $sum: {
+              $ifNull: ['$fare', 0]
+            }
+          }
+        }
+      },
+
+      {
+        $sort: {
+          bookings: -1
+        }
+      },
+
+      {
+        $limit: 5
       }
-    },
-    { $sort: { bookings: -1 } },
-    { $limit: 5 }
-  ]);
+    ]);
 
-  const routePerformance = await Route.populate(routeData, { path: '_id', model: 'Route' });
+  let routePerformance = [];
+
+  try {
+    routePerformance =
+      await Route.populate(
+        routeData,
+        {
+          path: '_id',
+          model: 'Route'
+        }
+      );
+  } catch (error) {
+    console.error(
+      'Analytics route population error:',
+      error.message
+    );
+
+    routePerformance =
+      routeData;
+  }
 
   res.status(200).json({
     success: true,
+
     data: {
-      revenue: totalRevenue,
-      bookings,
-      seatChanges,
-      passengerGrowth,
-      smartSeatAdoption,
-      routePerformance: routePerformance.map(r => ({
-        from: r._id.source,
-        to: r._id.destination,
-        bookings: r.bookings,
-        revenue: r.revenue
-      }))
+      revenue:
+        totalRevenue,
+
+      bookings:
+        bookings || 0,
+
+      seatChanges:
+        seatChanges || 0,
+
+      passengerGrowth:
+        passengerGrowth || 0,
+
+      smartSeatAdoption:
+        smartSeatAdoption || 0,
+
+      routePerformance:
+        routePerformance
+          .filter(Boolean)
+          .map((r) => {
+            const route =
+              r?._id &&
+              typeof r._id === 'object'
+                ? r._id
+                : null;
+
+            return {
+              from:
+                route?.source ||
+                'Unknown',
+
+              to:
+                route?.destination ||
+                'Unknown',
+
+              bookings:
+                Number(r?.bookings) || 0,
+
+              revenue:
+                Number(r?.revenue) || 0
+            };
+          })
     }
   });
 });
 
-/**
- * @desc    Get admin settings
- * @route   GET /api/admin/settings
- * @access  Private/Admin
- */
+/*
+|--------------------------------------------------------------------------
+| GET SETTINGS
+|--------------------------------------------------------------------------
+|
+| GET /api/admin/settings
+|
+*/
+
 exports.getSettings = asyncHandler(async (req, res, next) => {
-  // For now, return default settings
-  // In production, this would be stored in database
   res.status(200).json({
     success: true,
+
     data: {
-      siteName: 'SmartSeat',
-      supportEmail: 'support@smartseat.com',
-      supportPhone: '+91 1800-123-4567',
-      enableSmartSeat: true,
-      enableRecommendations: true,
-      enableNotifications: true,
-      maxSeatChanges: 3,
-      seatChangeCutoffHours: 24
+      siteName:
+        'SmartSeat',
+
+      supportEmail:
+        'support@smartseat.com',
+
+      supportPhone:
+        '+91 1800-123-4567',
+
+      enableSmartSeat:
+        true,
+
+      enableRecommendations:
+        true,
+
+      enableNotifications:
+        true,
+
+      maxSeatChanges:
+        3,
+
+      seatChangeCutoffHours:
+        24
     }
   });
 });
 
-/**
- * @desc    Update admin settings
- * @route   PATCH /api/admin/settings
- * @access  Private/Admin
- */
+/*
+|--------------------------------------------------------------------------
+| UPDATE SETTINGS
+|--------------------------------------------------------------------------
+|
+| PATCH /api/admin/settings
+|
+*/
+
 exports.updateSettings = asyncHandler(async (req, res, next) => {
-  // For now, just return success
-  // In production, this would update database
   res.status(200).json({
     success: true,
-    message: 'Settings updated successfully',
-    data: req.body
+
+    message:
+      'Settings updated successfully',
+
+    data:
+      req.body
   });
 });
 
-/**
- * @desc    Create route
- * @route   POST /api/admin/routes
- * @access  Private/Admin
- */
+/*
+|--------------------------------------------------------------------------
+| CREATE ROUTE
+|--------------------------------------------------------------------------
+|
+| POST /api/admin/routes
+|
+*/
+
 exports.createRoute = asyncHandler(async (req, res, next) => {
-  const route = await Route.create(req.body);
+  const route =
+    await Route.create(
+      req.body
+    );
 
   res.status(201).json({
     success: true,
-    message: 'Route created successfully',
-    data: route
+
+    message:
+      'Route created successfully',
+
+    data:
+      route
   });
 });
 
-/**
- * @desc    Update route
- * @route   PATCH /api/admin/routes/:id
- * @access  Private/Admin
- */
+/*
+|--------------------------------------------------------------------------
+| UPDATE ROUTE
+|--------------------------------------------------------------------------
+|
+| PATCH /api/admin/routes/:id
+|
+*/
+
 exports.updateRoute = asyncHandler(async (req, res, next) => {
-  const route = await Route.findByIdAndUpdate(
-    req.params.id,
-    req.body,
-    { new: true, runValidators: true }
-  );
+  const route =
+    await Route.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      {
+        new: true,
+        runValidators: true
+      }
+    );
 
   if (!route) {
     return res.status(404).json({
@@ -605,18 +1578,29 @@ exports.updateRoute = asyncHandler(async (req, res, next) => {
 
   res.status(200).json({
     success: true,
-    message: 'Route updated successfully',
-    data: route
+
+    message:
+      'Route updated successfully',
+
+    data:
+      route
   });
 });
 
-/**
- * @desc    Delete route
- * @route   DELETE /api/admin/routes/:id
- * @access  Private/Admin
- */
+/*
+|--------------------------------------------------------------------------
+| DELETE ROUTE
+|--------------------------------------------------------------------------
+|
+| DELETE /api/admin/routes/:id
+|
+*/
+
 exports.deleteRoute = asyncHandler(async (req, res, next) => {
-  const route = await Route.findByIdAndDelete(req.params.id);
+  const route =
+    await Route.findByIdAndDelete(
+      req.params.id
+    );
 
   if (!route) {
     return res.status(404).json({
@@ -627,36 +1611,57 @@ exports.deleteRoute = asyncHandler(async (req, res, next) => {
 
   res.status(200).json({
     success: true,
-    message: 'Route deleted successfully'
+
+    message:
+      'Route deleted successfully'
   });
 });
 
-/**
- * @desc    Create schedule
- * @route   POST /api/admin/schedules
- * @access  Private/Admin
- */
+/*
+|--------------------------------------------------------------------------
+| CREATE SCHEDULE
+|--------------------------------------------------------------------------
+|
+| POST /api/admin/schedules
+|
+*/
+
 exports.createSchedule = asyncHandler(async (req, res, next) => {
-  const schedule = await Schedule.create(req.body);
+  const schedule =
+    await Schedule.create(
+      req.body
+    );
 
   res.status(201).json({
     success: true,
-    message: 'Schedule created successfully',
-    data: schedule
+
+    message:
+      'Schedule created successfully',
+
+    data:
+      schedule
   });
 });
 
-/**
- * @desc    Update schedule
- * @route   PATCH /api/admin/schedules/:id
- * @access  Private/Admin
- */
+/*
+|--------------------------------------------------------------------------
+| UPDATE SCHEDULE
+|--------------------------------------------------------------------------
+|
+| PATCH /api/admin/schedules/:id
+|
+*/
+
 exports.updateSchedule = asyncHandler(async (req, res, next) => {
-  const schedule = await Schedule.findByIdAndUpdate(
-    req.params.id,
-    req.body,
-    { new: true, runValidators: true }
-  );
+  const schedule =
+    await Schedule.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      {
+        new: true,
+        runValidators: true
+      }
+    );
 
   if (!schedule) {
     return res.status(404).json({
@@ -667,18 +1672,29 @@ exports.updateSchedule = asyncHandler(async (req, res, next) => {
 
   res.status(200).json({
     success: true,
-    message: 'Schedule updated successfully',
-    data: schedule
+
+    message:
+      'Schedule updated successfully',
+
+    data:
+      schedule
   });
 });
 
-/**
- * @desc    Delete schedule
- * @route   DELETE /api/admin/schedules/:id
- * @access  Private/Admin
- */
+/*
+|--------------------------------------------------------------------------
+| DELETE SCHEDULE
+|--------------------------------------------------------------------------
+|
+| DELETE /api/admin/schedules/:id
+|
+*/
+
 exports.deleteSchedule = asyncHandler(async (req, res, next) => {
-  const schedule = await Schedule.findByIdAndDelete(req.params.id);
+  const schedule =
+    await Schedule.findByIdAndDelete(
+      req.params.id
+    );
 
   if (!schedule) {
     return res.status(404).json({
@@ -689,28 +1705,33 @@ exports.deleteSchedule = asyncHandler(async (req, res, next) => {
 
   res.status(200).json({
     success: true,
-    message: 'Schedule deleted successfully'
+
+    message:
+      'Schedule deleted successfully'
   });
 });
 
-/**
- * @desc    Report a bus delay and notify affected passengers
- * @route   POST /api/admin/schedules/:id/delay
- * @access  Private/Admin
- *
- * Body: { delayMinutes: number }
- *
- * - Updates Schedule.delayMinutes
- * - Finds all confirmed/pending bookings for the schedule
- * - Creates one Notification per affected passenger (deduplicates: skips
- *   passengers who already have an unread delay notification for the same
- *   schedule with the same delay value)
- * - Emits real-time socket events if socket.io is available
- */
-exports.reportDelay = asyncHandler(async (req, res, next) => {
-  const { id } = req.params;
-  const { delayMinutes } = req.body;
+/*
+|--------------------------------------------------------------------------
+| REPORT BUS DELAY
+|--------------------------------------------------------------------------
+|
+| POST /api/admin/schedules/:id/delay
+|
+*/
 
+exports.reportDelay = asyncHandler(async (req, res, next) => {
+  const {
+    id
+  } = req.params;
+
+  const {
+    delayMinutes
+  } = req.body;
+
+  /*
+   * Validate delay
+   */
   if (
     typeof delayMinutes !== 'number' ||
     delayMinutes < 0 ||
@@ -718,13 +1739,25 @@ exports.reportDelay = asyncHandler(async (req, res, next) => {
   ) {
     return res.status(400).json({
       success: false,
-      message: 'delayMinutes must be a non-negative number'
+
+      message:
+        'delayMinutes must be a non-negative number'
     });
   }
 
-  const schedule = await Schedule.findById(id)
-    .populate('busId', 'busNumber operatorName')
-    .populate('routeId', 'source destination');
+  /*
+   * Find schedule
+   */
+  const schedule =
+    await Schedule.findById(id)
+      .populate(
+        'busId',
+        'busNumber operatorName'
+      )
+      .populate(
+        'routeId',
+        'source destination'
+      );
 
   if (!schedule) {
     return res.status(404).json({
@@ -733,104 +1766,288 @@ exports.reportDelay = asyncHandler(async (req, res, next) => {
     });
   }
 
-  // Update the schedule delay
-  schedule.delayMinutes = delayMinutes;
+  /*
+   * Update delay
+   */
+  schedule.delayMinutes =
+    delayMinutes;
+
   await schedule.save();
 
+  /*
+   * Delay cleared
+   */
   if (delayMinutes === 0) {
-    // Delay cleared — no notifications needed, just respond
     return res.status(200).json({
       success: true,
-      message: 'Schedule delay cleared',
-      data: { scheduleId: id, delayMinutes: 0 }
-    });
-  }
 
-  // Find affected bookings (only confirmed/pending bookings for this schedule)
-  const affectedBookings = await Booking.find({
-    scheduleId: id,
-    bookingStatus: { $in: ['confirmed', 'pending'] }
-  }).select('userId bookingId seatNumber');
+      message:
+        'Schedule delay cleared',
 
-  if (affectedBookings.length === 0) {
-    return res.status(200).json({
-      success: true,
-      message: 'Delay recorded. No passengers to notify.',
-      data: { scheduleId: id, delayMinutes, notified: 0 }
-    });
-  }
+      data: {
+        scheduleId:
+          id,
 
-  const from = schedule.routeId?.source || 'Origin';
-  const to   = schedule.routeId?.destination || 'Destination';
-  const busNumber = schedule.busId?.busNumber || 'Bus';
-
-  // Build updated departure time string for the message
-  let updatedDepartureText = '';
-  if (schedule.departureTime) {
-    const [hh, mm] = schedule.departureTime.split(':').map(Number);
-    const totalMins = hh * 60 + mm + delayMinutes;
-    const newHH = Math.floor(totalMins / 60) % 24;
-    const newMM = totalMins % 60;
-    const period = newHH >= 12 ? 'PM' : 'AM';
-    const displayH = newHH % 12 || 12;
-    updatedDepartureText = ` New departure: ${displayH}:${String(newMM).padStart(2, '0')} ${period}.`;
-  }
-
-  const title   = 'Bus Delay Alert';
-  const message =
-    `Your SmartSeat bus (${busNumber}) from ${from} to ${to} is delayed by approximately ${delayMinutes} minute${delayMinutes !== 1 ? 's' : ''}.${updatedDepartureText}`;
-
-  // Deduplicate: find any existing unread delay notifications for this schedule
-  // with the exact same delay value so we do not spam the same passenger.
-  const existingNotifs = await Notification.find({
-    scheduleId: id,
-    type: 'delay',
-    'metadata.delayMinutes': delayMinutes,
-    read: false
-  }).select('userId').lean();
-
-  const alreadyNotifiedUserIds = new Set(
-    existingNotifs.map((n) => n.userId.toString())
-  );
-
-  const notificationsToCreate = affectedBookings
-    .filter((b) => !alreadyNotifiedUserIds.has(b.userId.toString()))
-    .map((b) => ({
-      userId:    b.userId,
-      type:      'delay',
-      category:  'Delay',
-      title,
-      message,
-      bookingId:  b._id,
-      scheduleId: schedule._id,
-      metadata: {
-        delayMinutes,
-        busNumber,
-        from,
-        to,
-        originalDepartureTime: schedule.departureTime,
-        travelDate: schedule.travelDate
+        delayMinutes:
+          0
       }
-    }));
+    });
+  }
 
+  /*
+   * Find affected bookings
+   */
+  const affectedBookings =
+    await Booking.find({
+      scheduleId: id,
+
+      bookingStatus: {
+        $in: [
+          'confirmed',
+          'pending'
+        ]
+      }
+    })
+      .select(
+        'userId bookingId seatNumber'
+      )
+      .lean();
+
+  if (
+    affectedBookings.length === 0
+  ) {
+    return res.status(200).json({
+      success: true,
+
+      message:
+        'Delay recorded. No passengers to notify.',
+
+      data: {
+        scheduleId:
+          id,
+
+        delayMinutes,
+
+        notified:
+          0
+      }
+    });
+  }
+
+  /*
+   * Route information
+   */
+  const from =
+    schedule.routeId?.source ||
+    'Origin';
+
+  const to =
+    schedule.routeId?.destination ||
+    'Destination';
+
+  const busNumber =
+    schedule.busId?.busNumber ||
+    'Bus';
+
+  /*
+   * Calculate updated departure time.
+   */
+  let updatedDepartureText = '';
+
+  if (schedule.departureTime) {
+    const [
+      hh,
+      mm
+    ] =
+      schedule.departureTime
+        .split(':')
+        .map(Number);
+
+    const totalMins =
+      hh * 60 +
+      mm +
+      delayMinutes;
+
+    const newHH =
+      Math.floor(
+        totalMins / 60
+      ) % 24;
+
+    const newMM =
+      totalMins % 60;
+
+    const period =
+      newHH >= 12
+        ? 'PM'
+        : 'AM';
+
+    const displayH =
+      newHH % 12 ||
+      12;
+
+    updatedDepartureText =
+      ` New departure: ${displayH}:${String(
+        newMM
+      ).padStart(2, '0')} ${period}.`;
+  }
+
+  /*
+   * Notification content
+   */
+  const title =
+    'Bus Delay Alert';
+
+  const message =
+    `Your SmartSeat bus (${busNumber}) from ${from} to ${to} is delayed by approximately ${delayMinutes} minute${
+      delayMinutes !== 1
+        ? 's'
+        : ''
+    }.${updatedDepartureText}`;
+
+  /*
+   * Existing notifications
+   */
+  const existingNotifs =
+    await Notification.find({
+      scheduleId: id,
+
+      type: 'delay',
+
+      'metadata.delayMinutes':
+        delayMinutes,
+
+      read: false
+    })
+      .select('userId')
+      .lean();
+
+  /*
+   * Safely create Set.
+   */
+  const alreadyNotifiedUserIds =
+    new Set(
+      existingNotifs
+        .filter(
+          (n) =>
+            n?.userId
+        )
+        .map(
+          (n) =>
+            n.userId.toString()
+        )
+    );
+
+  /*
+   * Create notifications.
+   *
+   * Skip bookings where userId is missing.
+   */
+  const notificationsToCreate =
+    affectedBookings
+      .filter(
+        (b) =>
+          b?.userId &&
+          !alreadyNotifiedUserIds.has(
+            b.userId.toString()
+          )
+      )
+      .map((b) => ({
+        userId:
+          b.userId,
+
+        type:
+          'delay',
+
+        category:
+          'Delay',
+
+        title,
+
+        message,
+
+        bookingId:
+          b._id,
+
+        scheduleId:
+          schedule._id,
+
+        metadata: {
+          delayMinutes,
+
+          busNumber,
+
+          from,
+
+          to,
+
+          originalDepartureTime:
+            schedule.departureTime,
+
+          travelDate:
+            schedule.travelDate
+        }
+      }));
+
+  /*
+   * Insert notifications.
+   */
   let notified = 0;
-  if (notificationsToCreate.length > 0) {
-    const created = await Notification.insertMany(notificationsToCreate);
-    notified = created.length;
 
-    // Emit real-time socket events if socket.io is available
+  if (
+    notificationsToCreate.length > 0
+  ) {
+    const created =
+      await Notification.insertMany(
+        notificationsToCreate
+      );
+
+    notified =
+      created.length;
+
+    /*
+     * Socket.IO
+     */
     if (global.socketIO) {
-      created.forEach((notif) => {
-        global.socketIO
-          .to(`user:${notif.userId}`)
-          .emit('notification:new', notif);
-      });
+      created.forEach(
+        (notif) => {
+          if (!notif?.userId) {
+            return;
+          }
+
+          global.socketIO
+            .to(
+              `user:${notif.userId}`
+            )
+            .emit(
+              'notification:new',
+              notif
+            );
+        }
+      );
     }
   }
 
+  /*
+   * Final response
+   */
   return res.status(200).json({
     success: true,
-    message: `Delay recorded. ${notified} passenger${notified !== 1 ? 's' : ''} notified.`,
-    data: { scheduleId: id, delayMinutes, notified }
+
+    message:
+      `Delay recorded. ${notified} passenger${
+        notified !== 1
+          ? 's'
+          : ''
+      } notified.`,
+
+    data: {
+      scheduleId:
+        id,
+
+      delayMinutes,
+
+      notified
+    }
   });
 });
+
