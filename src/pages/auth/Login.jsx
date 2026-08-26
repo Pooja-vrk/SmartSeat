@@ -13,6 +13,7 @@ const Login = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -122,6 +123,8 @@ const Login = () => {
                   required
                   icon={Lock}
                   showPasswordToggle
+                  showPassword={showPassword}
+                  onPasswordToggle={() => setShowPassword(prev => !prev)}
                 />
 
                 <div className="flex items-center justify-between">

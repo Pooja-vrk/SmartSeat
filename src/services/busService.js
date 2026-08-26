@@ -329,5 +329,26 @@ export const busService = {
       success: true,
       data: sorted
     };
+  },
+
+  // ==========================================================
+  // GET ROUTES
+  // ==========================================================
+
+  getRoutes: async () => {
+    try {
+      const response = await api.get('/buses/routes');
+      return {
+        success: true,
+        data: response?.data || []
+      };
+    } catch (error) {
+      throw (
+        error.response?.data || {
+          success: false,
+          message: 'Failed to get routes'
+        }
+      );
+    }
   }
 };

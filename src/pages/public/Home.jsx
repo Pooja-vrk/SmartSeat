@@ -17,17 +17,73 @@ import {
   TrendingUp
 } from 'lucide-react';
 
+import { busService } from '../../services/busService';
+
 const Home = () => {
   const [searchParams, setSearchParams] = useState({
     from: '',
     to: '',
     date: ''
   });
+  const [routes, setRoutes] = useState([]);
+
+  useEffect(() => {
+    const fetchRoutes = async () => {
+      try {
+        const response = await busService.getRoutes();
+        if (response.success && Array.isArray(response.data)) {
+          setRoutes(response.data);
+        }
+      } catch (err) {
+        console.error('Error fetching routes for search dropdowns:', err);
+      }
+    };
+    fetchRoutes();
+  }, []);
+
+  // Compute unique source cities for From dropdown
+  const fromCities = Array.from(
+    new Set(routes.map(r => r.source).filter(Boolean))
+  ).sort();
+
+  // Compute available destination cities based on selected From city
+  const toCities = searchParams.from
+    ? Array.from(
+        new Set(
+          routes
+            .filter(r => r.source === searchParams.from)
+            .map(r => r.destination)
+            .filter(Boolean)
+        )
+      ).sort()
+    : [];
+
+  const handleFromChange = (e) => {
+    const newFrom = e.target.value;
+    const newToCities = newFrom
+      ? Array.from(
+          new Set(
+            routes
+              .filter(r => r.source === newFrom)
+              .map(r => r.destination)
+              .filter(Boolean)
+          )
+        )
+      : [];
+
+    const isToValid = newToCities.includes(searchParams.to);
+
+    setSearchParams(prev => ({
+      ...prev,
+      from: newFrom,
+      to: isToValid ? prev.to : ''
+    }));
+  };
 
   const handleSearch = (e) => {
     e.preventDefault();
     // Navigate to search results with params
-    window.location.href = `/search?from=${searchParams.from}&to=${searchParams.to}&date=${searchParams.date}`;
+    window.location.href = `/search?from=${encodeURIComponent(searchParams.from)}&to=${encodeURIComponent(searchParams.to)}&date=${encodeURIComponent(searchParams.date)}`;
   };
 
   const features = [
@@ -128,30 +184,39 @@ const Home = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">From</label>
                   <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="Departure city"
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 z-10 pointer-events-none" />
+                    <select
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900 bg-white appearance-none cursor-pointer"
                       value={searchParams.from}
-                      onChange={(e) => setSearchParams({...searchParams, from: e.target.value})}
+                      onChange={handleFromChange}
                       required
-                    />
+                    >
+                      <option value="">Select departure city</option>
+                      {fromCities.map(city => (
+                        <option key={city} value={city}>{city}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">To</label>
                   <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="Destination city"
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 z-10 pointer-events-none" />
+                    <select
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900 bg-white appearance-none cursor-pointer disabled:bg-gray-100 disabled:cursor-not-allowed"
                       value={searchParams.to}
-                      onChange={(e) => setSearchParams({...searchParams, to: e.target.value})}
+                      onChange={(e) => setSearchParams(prev => ({ ...prev, to: e.target.value }))}
+                      disabled={!searchParams.from}
                       required
-                    />
+                    >
+                      <option value="">
+                        {!searchParams.from ? 'Select departure city first' : 'Select destination city'}
+                      </option>
+                      {toCities.map(city => (
+                        <option key={city} value={city}>{city}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 

@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardHeader, CardBody, Button, Input, Select, Modal, ModalHeader, ModalBody, ModalFooter, Loading, Badge } from '../../components/common';
 import { adminService } from '../../services/adminService';
+import { busService } from '../../services/busService';
 import { 
   Bus, 
   Plus, 
@@ -12,7 +13,8 @@ import {
   Filter,
   Shield,
   Clock,
-  AlertTriangle
+  AlertTriangle,
+  Calendar
 } from 'lucide-react';
 
 const AdminBuses = () => {
@@ -37,6 +39,20 @@ const AdminBuses = () => {
   const [formError, setFormError] = useState('');
   const [formSuccess, setFormSuccess] = useState('');
 
+  // ── Schedule creation ──────────────────────────────────────
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [scheduleBus, setScheduleBus] = useState(null);   // bus being scheduled
+  const [routes, setRoutes] = useState([]);
+  const [scheduleForm, setScheduleForm] = useState({
+    routeId: '',
+    travelDate: '',
+    departureTime: '',
+    arrivalTime: '',
+    fare: ''
+  });
+  const [scheduleError, setScheduleError] = useState('');
+  const [scheduleLoading, setScheduleLoading] = useState(false);
+
   useEffect(() => {
     loadBuses();
   }, []);
@@ -52,6 +68,65 @@ const AdminBuses = () => {
       console.error('Error loading buses:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadRoutes = async () => {
+    try {
+      const response = await busService.getRoutes();
+      if (response?.success) {
+        setRoutes(response.data || []);
+      }
+    } catch (error) {
+      console.error('Error loading routes:', error);
+    }
+  };
+
+  const openScheduleModal = (bus) => {
+    setScheduleBus(bus);
+    setScheduleForm({ routeId: '', travelDate: '', departureTime: '', arrivalTime: '', fare: '' });
+    setScheduleError('');
+    if (routes.length === 0) loadRoutes();
+    setShowScheduleModal(true);
+  };
+
+  const handleAddSchedule = async () => {
+    setScheduleError('');
+    const { routeId, travelDate, departureTime, arrivalTime, fare } = scheduleForm;
+
+    if (!routeId)        { setScheduleError('Please select a route');            return; }
+    if (!travelDate)     { setScheduleError('Travel date is required');           return; }
+    if (!departureTime)  { setScheduleError('Departure time is required');        return; }
+    if (!arrivalTime)    { setScheduleError('Arrival time is required');          return; }
+    if (!fare || Number(fare) < 0) { setScheduleError('Valid fare is required');  return; }
+
+    setScheduleLoading(true);
+    try {
+      // Dates are stored as UTC midnight so the search date filter matches.
+      const utcDate = new Date(travelDate + 'T00:00:00.000Z');
+
+      const response = await adminService.createSchedule({
+        busId:         scheduleBus._id || scheduleBus.id,
+        routeId,
+        travelDate:    utcDate.toISOString(),
+        departureTime,
+        arrivalTime,
+        fare:          Number(fare),
+        isActive:      true,
+        availableSeats: scheduleBus.totalSeats || scheduleBus.seatConfiguration?.totalSeats || 40
+      });
+
+      if (response.success) {
+        setShowScheduleModal(false);
+        setScheduleBus(null);
+        loadBuses();   // refresh to update hasSchedule badge
+      } else {
+        setScheduleError(response.message || 'Failed to create schedule');
+      }
+    } catch (error) {
+      setScheduleError(error?.message || 'Failed to create schedule. Please try again.');
+    } finally {
+      setScheduleLoading(false);
     }
   };
 
@@ -300,6 +375,17 @@ const AdminBuses = () => {
                   Delete
                 </Button>
               </div>
+              {bus.hasSchedule === false && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => openScheduleModal(bus)}
+                  icon={Calendar}
+                  className="w-full mt-2"
+                >
+                  Add Schedule to make searchable
+                </Button>
+              )}
             </CardBody>
           </Card>
         ))}
@@ -471,6 +557,82 @@ const AdminBuses = () => {
           </Button>
           <Button variant="danger" onClick={handleDeleteBus}>
             Delete
+          </Button>
+        </ModalFooter>
+      </Modal>
+
+      {/* Add Schedule Modal — makes a bus appear in Search results */}
+      <Modal
+        isOpen={showScheduleModal}
+        onClose={() => { setShowScheduleModal(false); setScheduleError(''); }}
+        title={`Add Schedule — ${scheduleBus?.operator} (${scheduleBus?.busNumber})`}
+        size="md"
+      >
+        <ModalBody>
+          <div className="space-y-4">
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+              A schedule assigns this bus to a route, date, and time. Once created the bus will appear in Search Buses.
+            </div>
+
+            {scheduleError && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                {scheduleError}
+              </div>
+            )}
+
+            <Select
+              label="Route"
+              placeholder="Select a route"
+              value={scheduleForm.routeId}
+              onChange={(e) => setScheduleForm({ ...scheduleForm, routeId: e.target.value })}
+              required
+              options={routes.map(r => ({
+                value: r._id,
+                label: `${r.source} → ${r.destination}`
+              }))}
+            />
+
+            <Input
+              label="Travel Date"
+              type="date"
+              value={scheduleForm.travelDate}
+              onChange={(e) => setScheduleForm({ ...scheduleForm, travelDate: e.target.value })}
+              required
+            />
+
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Departure Time"
+                type="time"
+                value={scheduleForm.departureTime}
+                onChange={(e) => setScheduleForm({ ...scheduleForm, departureTime: e.target.value })}
+                required
+              />
+              <Input
+                label="Arrival Time"
+                type="time"
+                value={scheduleForm.arrivalTime}
+                onChange={(e) => setScheduleForm({ ...scheduleForm, arrivalTime: e.target.value })}
+                required
+              />
+            </div>
+
+            <Input
+              label="Fare (₹)"
+              type="number"
+              placeholder="e.g. 450"
+              value={scheduleForm.fare}
+              onChange={(e) => setScheduleForm({ ...scheduleForm, fare: e.target.value })}
+              required
+            />
+          </div>
+        </ModalBody>
+        <ModalFooter>
+          <Button variant="outline" onClick={() => { setShowScheduleModal(false); setScheduleError(''); }}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={handleAddSchedule} disabled={scheduleLoading}>
+            {scheduleLoading ? 'Creating...' : 'Create Schedule'}
           </Button>
         </ModalFooter>
       </Modal>

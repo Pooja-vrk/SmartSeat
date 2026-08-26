@@ -17,6 +17,8 @@ const Register = () => {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -213,6 +215,8 @@ const Register = () => {
                   required
                   icon={Lock}
                   showPasswordToggle
+                  showPassword={showPassword}
+                  onPasswordToggle={() => setShowPassword(prev => !prev)}
                   helperText="Minimum 6 characters"
                 />
 
@@ -227,6 +231,8 @@ const Register = () => {
                   required
                   icon={Lock}
                   showPasswordToggle
+                  showPassword={showConfirmPassword}
+                  onPasswordToggle={() => setShowConfirmPassword(prev => !prev)}
                 />
 
                 <div className="flex items-start space-x-2">
