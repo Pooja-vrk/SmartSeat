@@ -48,9 +48,11 @@ const TicketPage = () => {
       {};
 
     const bus =
+      (b.busId && typeof b.busId === 'object' ? b.busId : null) ||
       b.bus || schedule?.busId || {};
 
     const passenger = b.passengerDetails || {};
+    const email = passenger.email || b.passengerEmail || (typeof b.userId === 'object' ? b.userId?.email : null) || 'N/A';
 
     const from  = route?.source || route?.from || 'N/A';
     const to    = route?.destination || route?.to || 'N/A';
@@ -87,6 +89,7 @@ const TicketPage = () => {
       '',
       '-- PASSENGER INFORMATION ---------------',
       `Name:          ${passenger.name || 'N/A'}`,
+      `Email:         ${email}`,
       `Phone:         ${passenger.phone || 'N/A'}`,
       '',
       '-- JOURNEY INFORMATION -----------------',
@@ -137,7 +140,9 @@ const TicketPage = () => {
       (schedule?.routeId && typeof schedule.routeId === 'object' ? schedule.routeId : null) ||
       schedule?.route ||
       {};
-    const bus   = b.bus   || schedule?.busId   || {};
+    const bus   =
+      (b.busId && typeof b.busId === 'object' ? b.busId : null) ||
+      b.bus   || schedule?.busId   || {};
 
     const from  = route?.source || route?.from || 'N/A';
     const to    = route?.destination || route?.to || 'N/A';

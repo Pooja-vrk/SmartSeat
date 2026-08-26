@@ -39,9 +39,10 @@ const Ticket = ({ booking, onDownload, onShare }) => {
     {};
 
   const bus =
+    (safeBooking?.busId && typeof safeBooking.busId === 'object' ? safeBooking.busId : null) ||
     safeBooking?.bus ||
     schedule?.bus ||
-    schedule?.busId ||
+    (schedule?.busId && typeof schedule.busId === 'object' ? schedule.busId : null) ||
     {};
 
   const passenger =
@@ -72,6 +73,7 @@ const Ticket = ({ booking, onDownload, onShare }) => {
   const passengerEmail =
     passenger?.email ||
     safeBooking?.passengerEmail ||
+    (typeof safeBooking?.userId === 'object' ? safeBooking.userId?.email : null) ||
     'N/A';
 
   const passengerPhone =

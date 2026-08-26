@@ -181,13 +181,17 @@ const MyBookings = () => {
                       <div>
                         <p className="text-xs text-gray-600 mb-1">Date</p>
                         <p className="font-medium text-gray-900">
-                          {booking.scheduleId?.departure ? formatDateTime(booking.scheduleId.departure).date : 'N/A'}
+                          {booking.scheduleId?.travelDate
+                            ? new Date(booking.scheduleId.travelDate).toLocaleDateString('en-IN', {
+                                weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
+                              })
+                            : 'N/A'}
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-600 mb-1">Time</p>
+                        <p className="text-xs text-gray-600 mb-1">Departure</p>
                         <p className="font-medium text-gray-900">
-                          {booking.scheduleId?.departure ? formatDateTime(booking.scheduleId.departure).time : 'N/A'}
+                          {booking.scheduleId?.departureTime || 'N/A'}
                         </p>
                       </div>
                       <div>
