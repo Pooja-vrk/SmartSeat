@@ -3,6 +3,7 @@ const router = express.Router();
 const {
   getDashboard,
   getBuses,
+  getBusesWithScheduleStatus,
   createBus,
   updateBus,
   deleteBus,
@@ -23,7 +24,7 @@ const {
 const { authenticate, requireAdmin } = require('../middleware/auth');
 
 router.get('/dashboard', authenticate, requireAdmin, getDashboard);
-router.get('/buses', authenticate, requireAdmin, getBuses);
+router.get('/buses', authenticate, requireAdmin, getBusesWithScheduleStatus);
 router.post('/buses', authenticate, requireAdmin, createBus);
 router.patch('/buses/:id', authenticate, requireAdmin, updateBus);
 router.delete('/buses/:id', authenticate, requireAdmin, deleteBus);

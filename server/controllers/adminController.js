@@ -1088,10 +1088,21 @@ exports.getNotifications = asyncHandler(async (req, res, next) => {
             n?.type ||
             'general',
 
+          title:
+            n?.title ||
+            '',
+
           recipient:
             (n?.userId && n.userId.name) ||
             (n?.userId && n.userId.email) ||
             'Unknown User',
+
+          // For contact-form (type='system') notifications, expose sender
+          // details from metadata so the admin can see who sent the message.
+          senderName:  n?.metadata?.senderName  || null,
+          senderEmail: n?.metadata?.senderEmail || null,
+          senderPhone: n?.metadata?.senderPhone || null,
+          subject:     n?.metadata?.subject     || null,
 
           message:
             n?.message ||
@@ -1113,6 +1124,7 @@ exports.getNotifications = asyncHandler(async (req, res, next) => {
         return {
           id: n?._id || null,
           type: n?.type || 'general',
+          title: n?.title || '',
           recipient: 'Unknown User',
           message: n?.message || '',
           read: Boolean(n?.read),
@@ -2051,3 +2063,128 @@ exports.reportDelay = asyncHandler(async (req, res, next) => {
   });
 });
 
+
+/*
+|--------------------------------------------------------------------------
+| SUBMIT CONTACT MESSAGE
+|--------------------------------------------------------------------------
+|
+| POST /api/contact   (public — no auth required)
+|
+| Creates a Notification document addressed to the admin so it appears
+| in the Admin → Notifications log under type='system'.
+|
+| Because Notification.userId is required (ObjectId → User), we find the
+| first admin user and use their _id as the recipient.  The sender's
+| details are preserved in notification.metadata.
+|
+*/
+
+exports.submitContact = asyncHandler(async (req, res, next) => {
+  const {
+    name,
+    email,
+    phone,
+    subject,
+    message
+  } = req.body;
+
+  /*
+   * Validate required fields.
+   */
+  if (!name || !email || !message) {
+    return res.status(400).json({
+      success: false,
+      message: 'Name, email, and message are required'
+    });
+  }
+
+  /*
+   * Find the admin user to address the notification to.
+   */
+  const adminUser = await User.findOne({ role: 'admin' }).lean();
+
+  if (!adminUser) {
+    /*
+     * No admin user in DB (edge case in dev/test).
+     * Still accept the submission but skip persistence.
+     */
+    return res.status(200).json({
+      success: true,
+      message: 'Message received'
+    });
+  }
+
+  /*
+   * Build a meaningful title from the subject.
+   */
+  const subjectLabels = {
+    booking:     'Booking Related',
+    payment:     'Payment Issue',
+    technical:   'Technical Support',
+    feedback:    'Feedback',
+    partnership: 'Partnership Inquiry',
+    other:       'General Inquiry'
+  };
+
+  const title =
+    `Contact: ${subjectLabels[subject] || subject || 'General Inquiry'} from ${name}`;
+
+  await Notification.create({
+    userId:   adminUser._id,
+    type:     'system',
+    category: 'System',
+    title,
+    message:  message.trim(),
+    metadata: {
+      senderName:  name,
+      senderEmail: email,
+      senderPhone: phone  || '',
+      subject:     subject || 'other',
+      source:      'contact_form'
+    }
+  });
+
+  return res.status(200).json({
+    success: true,
+    message: 'Your message has been sent. We will get back to you within 24 hours.'
+  });
+});
+
+/*
+|--------------------------------------------------------------------------
+| GET BUSES WITH SCHEDULE STATUS
+|--------------------------------------------------------------------------
+|
+| This replaces the existing getBuses to include a hasSchedule flag so the
+| Admin Buses page can warn about buses that are not yet searchable.
+|
+*/
+
+exports.getBusesWithScheduleStatus = asyncHandler(async (req, res, next) => {
+  const buses = await Bus.find().sort({ createdAt: -1 });
+
+  /*
+   * Find all busIds that have at least one Schedule document.
+   */
+  const busIdsWithSchedule = await Schedule.distinct('busId');
+
+  const busIdSet = new Set(
+    busIdsWithSchedule.map((id) => id.toString())
+  );
+
+  res.status(200).json({
+    success: true,
+
+    data: buses
+      .map((bus) => {
+        const formatted = formatBusForFrontend(bus);
+        if (!formatted) return null;
+        return {
+          ...formatted,
+          hasSchedule: busIdSet.has(bus._id.toString())
+        };
+      })
+      .filter(Boolean)
+  });
+});

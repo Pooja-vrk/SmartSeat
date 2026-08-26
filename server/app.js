@@ -183,6 +183,15 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/users', userRoutes);
 
 // ============================================================
+// PUBLIC CONTACT FORM
+// POST /api/contact — no authentication required
+// ============================================================
+
+const { submitContact } = require('./controllers/adminController');
+const asyncHandler = require('./utils/asyncHandler');
+app.post('/api/contact', submitContact);
+
+// ============================================================
 // 404 HANDLER
 // ============================================================
 

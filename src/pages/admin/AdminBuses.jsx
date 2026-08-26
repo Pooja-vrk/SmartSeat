@@ -1,7 +1,7 @@
 // Admin buses management page
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Card, CardHeader, CardBody, Button, Input, Select, Modal, ModalHeader, ModalBody, ModalFooter, Loading } from '../../components/common';
+import { Card, CardHeader, CardBody, Button, Input, Select, Modal, ModalHeader, ModalBody, ModalFooter, Loading, Badge } from '../../components/common';
 import { adminService } from '../../services/adminService';
 import { 
   Bus, 
@@ -11,7 +11,8 @@ import {
   Search, 
   Filter,
   Shield,
-  Clock
+  Clock,
+  AlertTriangle
 } from 'lucide-react';
 
 const AdminBuses = () => {
@@ -245,13 +246,21 @@ const AdminBuses = () => {
                     <p className="text-sm text-gray-600">{bus.busNumber}</p>
                   </div>
                 </div>
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                  bus.status === 'active' ? 'bg-green-100 text-green-800' :
-                  bus.status === 'maintenance' ? 'bg-yellow-100 text-yellow-800' :
-                  'bg-gray-100 text-gray-800'
-                }`}>
-                  {bus.status}
-                </span>
+                <div className="flex flex-col items-end gap-1">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    bus.status === 'active' ? 'bg-green-100 text-green-800' :
+                    bus.status === 'maintenance' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {bus.status}
+                  </span>
+                  {bus.hasSchedule === false && (
+                    <span className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                      <AlertTriangle className="w-3 h-3" />
+                      No Schedule
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-2 mb-4">

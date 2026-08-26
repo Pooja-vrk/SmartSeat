@@ -40,11 +40,19 @@ const AdminNotifications = () => {
   const getTypeBadge = (type) => {
     switch (type) {
       case 'adjacent_seat':
-        return <Badge variant="warning">Adjacent Seat</Badge>;
+      case 'smartseat':
+        return <Badge variant="warning">SmartSeat</Badge>;
       case 'booking':
         return <Badge variant="success">Booking</Badge>;
       case 'recommendation':
-        return <Badge variant="info">Recommendation</Badge>;
+      case 'seat_update':
+        return <Badge variant="info">Seat Update</Badge>;
+      case 'payment':
+        return <Badge variant="success">Payment</Badge>;
+      case 'delay':
+        return <Badge variant="danger">Delay</Badge>;
+      case 'system':
+        return <Badge variant="default">Contact / System</Badge>;
       default:
         return <Badge variant="default">{type}</Badge>;
     }
@@ -89,10 +97,12 @@ const AdminNotifications = () => {
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
               options={[
-                { value: 'all', label: 'All Types' },
-                { value: 'adjacent_seat', label: 'Adjacent Seat' },
-                { value: 'booking', label: 'Booking' },
-                { value: 'recommendation', label: 'Recommendation' }
+                { value: 'all',        label: 'All Types' },
+                { value: 'system',     label: 'Contact / System' },
+                { value: 'booking',    label: 'Booking' },
+                { value: 'delay',      label: 'Delay Alert' },
+                { value: 'smartseat',  label: 'SmartSeat' },
+                { value: 'payment',    label: 'Payment' }
               ]}
               className="md:w-48"
             />
@@ -117,10 +127,9 @@ const AdminNotifications = () => {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">ID</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Type</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Recipient</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Message</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">From / Recipient</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Subject / Message</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Time</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Status</th>
                 </tr>
@@ -128,11 +137,17 @@ const AdminNotifications = () => {
               <tbody>
                 {filteredNotifications.map(notification => (
                   <tr key={notification.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-3 px-4 font-medium text-gray-900">{notification.id}</td>
                     <td className="py-3 px-4">{getTypeBadge(notification.type)}</td>
-                    <td className="py-3 px-4 text-gray-600">{notification.recipient}</td>
-                    <td className="py-3 px-4 text-gray-600 max-w-xs truncate">{notification.message}</td>
                     <td className="py-3 px-4 text-gray-600">
+                      {notification.type === 'system' && notification.senderName
+                        ? `${notification.senderName} (${notification.senderEmail || notification.recipient})`
+                        : notification.recipient}
+                    </td>
+                    <td className="py-3 px-4 text-gray-600">
+                      <p className="font-medium text-gray-800 text-sm">{notification.title}</p>
+                      <p className="text-xs text-gray-500 truncate max-w-xs">{notification.message}</p>
+                    </td>
+                    <td className="py-3 px-4 text-gray-600 whitespace-nowrap">
                       {new Date(notification.time).toLocaleString()}
                     </td>
                     <td className="py-3 px-4">

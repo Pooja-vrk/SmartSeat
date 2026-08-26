@@ -1,6 +1,7 @@
 // Contact page
 import { useState } from 'react';
 import { Card, CardHeader, CardBody, Button, Input, Select } from '../../components/common';
+import api from '../../services/api';
 import { 
   Mail, 
   Phone, 
@@ -9,7 +10,8 @@ import {
   Clock,
   MessageSquare,
   Users,
-  CheckCircle
+  CheckCircle,
+  AlertCircle
 } from 'lucide-react';
 
 const Contact = () => {
@@ -21,12 +23,37 @@ const Contact = () => {
     message: ''
   });
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Simulate form submission
-    setSubmitted(true);
-    setTimeout(() => setSubmitted(false), 3000);
+    setError('');
+    setSubmitting(true);
+
+    try {
+      const response = await api.post('/contact', {
+        name:    formData.name.trim(),
+        email:   formData.email.trim(),
+        phone:   formData.phone.trim(),
+        subject: formData.subject,
+        message: formData.message.trim()
+      });
+
+      if (response?.success) {
+        setSubmitted(true);
+        setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
+      } else {
+        setError(response?.message || 'Failed to send message. Please try again.');
+      }
+    } catch (err) {
+      setError(
+        err?.message ||
+        'Unable to send message. Please check your connection and try again.'
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleChange = (e) => {
@@ -141,9 +168,22 @@ const Contact = () => {
                   <CheckCircle className="w-16 h-16 mx-auto mb-4 text-green-600" />
                   <h4 className="text-xl font-semibold text-gray-900 mb-2">Message Sent!</h4>
                   <p className="text-gray-600">We'll get back to you within 24 hours.</p>
+                  <Button
+                    variant="outline"
+                    className="mt-4"
+                    onClick={() => setSubmitted(false)}
+                  >
+                    Send Another Message
+                  </Button>
                 </div>
               ) : (
                 <form onSubmit={handleSubmit}>
+                  {error && (
+                    <div className="flex items-start space-x-2 p-3 mb-4 bg-red-50 border border-red-200 rounded-lg">
+                      <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                      <p className="text-sm text-red-700">{error}</p>
+                    </div>
+                  )}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <Input
                       label="Your Name"
@@ -210,8 +250,10 @@ const Contact = () => {
                     variant="primary"
                     className="w-full"
                     icon={Send}
+                    loading={submitting}
+                    disabled={submitting}
                   >
-                    Send Message
+                    {submitting ? 'Sending...' : 'Send Message'}
                   </Button>
                 </form>
               )}
