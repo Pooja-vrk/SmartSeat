@@ -186,7 +186,7 @@ const Home = () => {
                   <div className="relative">
                     <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 z-10 pointer-events-none" />
                     <select
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900 bg-white appearance-none cursor-pointer"
+                      className="w-full pl-10 pr-8 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900 bg-white cursor-pointer"
                       value={searchParams.from}
                       onChange={handleFromChange}
                       required
@@ -204,7 +204,7 @@ const Home = () => {
                   <div className="relative">
                     <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 z-10 pointer-events-none" />
                     <select
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900 bg-white appearance-none cursor-pointer disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      className="w-full pl-10 pr-8 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900 bg-white cursor-pointer disabled:bg-gray-100 disabled:cursor-not-allowed"
                       value={searchParams.to}
                       onChange={(e) => setSearchParams(prev => ({ ...prev, to: e.target.value }))}
                       disabled={!searchParams.from}
