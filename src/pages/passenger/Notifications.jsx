@@ -199,12 +199,13 @@ const Notifications = () => {
       ) : (
         <div className="space-y-4">
           {filteredNotifications.map(notification => {
+            const notifId = notification._id || notification.id;
             const Icon = getNotificationIcon(notification.type);
             const colorClass = getNotificationColor(notification.type);
             
             return (
               <Card 
-                key={notification.id} 
+                key={notifId} 
                 className={`transition-all ${
                   !notification.read ? 'border-l-4 border-l-primary-500 bg-primary-50' : ''
                 }`}
@@ -214,8 +215,8 @@ const Notifications = () => {
                     {/* Selection Checkbox */}
                     <input
                       type="checkbox"
-                      checked={selectedNotifications.has(notification.id)}
-                      onChange={() => handleSelectNotification(notification.id)}
+                      checked={selectedNotifications.has(notifId)}
+                      onChange={() => handleSelectNotification(notifId)}
                       className="mt-1 rounded text-primary-600"
                     />
 
@@ -249,7 +250,7 @@ const Notifications = () => {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleMarkAsRead(notification.id)}
+                          onClick={() => handleMarkAsRead(notifId)}
                           icon={Check}
                           className="text-gray-500 hover:text-gray-700"
                         />
@@ -257,7 +258,7 @@ const Notifications = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleDelete(notification.id)}
+                        onClick={() => handleDelete(notifId)}
                         icon={X}
                         className="text-gray-500 hover:text-red-600"
                       />

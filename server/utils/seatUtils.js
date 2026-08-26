@@ -63,27 +63,45 @@ const generateSeatLayout = async (busId, scheduleId, seatConfig) => {
  * @returns {Object} Adjacent passenger information
  */
 const findAdjacentPassenger = async (scheduleId, seatNumber) => {
-  // Find the seat
-  const seat = await Seat.findOne({ scheduleId, seatNumber });
+  // Find the seat (try exact match, or padded/unpadded variations)
+  let seat = await Seat.findOne({ scheduleId, seatNumber });
+  if (!seat) {
+    const match = seatNumber.match(/^(\d+)([A-Z])$/i);
+    if (match) {
+      const paddedNumber = `${match[1].padStart(2, '0')}${match[2].toUpperCase()}`;
+      seat = await Seat.findOne({ scheduleId, seatNumber: paddedNumber });
+    }
+  }
   if (!seat) return null;
 
-  // Find adjacent seats
+  // Prepare seat numbers to check (both padded and unpadded)
+  const numbersToCheck = [];
+  (seat.adjacentSeatNumbers || []).forEach(adjNum => {
+    numbersToCheck.push(adjNum);
+    const m = adjNum.match(/^0*(\d+)([A-Z])$/i);
+    if (m) {
+      numbersToCheck.push(`${m[1]}${m[2].toUpperCase()}`);
+      numbersToCheck.push(`${m[1].padStart(2, '0')}${m[2].toUpperCase()}`);
+    }
+  });
+
+  // Find adjacent seats that are booked
   const adjacentSeats = await Seat.find({
     scheduleId,
-    seatNumber: { $in: seat.adjacentSeatNumbers },
+    seatNumber: { $in: numbersToCheck },
     status: 'booked'
   }).populate('bookedBy', 'name email passengerCategory');
 
-  if (adjacentSeats.length === 0) return null;
+  if (!adjacentSeats || adjacentSeats.length === 0) return null;
 
   return adjacentSeats.map(adjacentSeat => ({
     seatNumber: adjacentSeat.seatNumber,
     passenger: {
-      id: adjacentSeat.bookedBy._id,
-      name: adjacentSeat.bookedBy.name,
-      passengerCategory: adjacentSeat.bookedBy.passengerCategory
+      id: adjacentSeat.bookedBy ? adjacentSeat.bookedBy._id : null,
+      name: adjacentSeat.bookedBy ? adjacentSeat.bookedBy.name : 'Passenger',
+      passengerCategory: adjacentSeat.bookedBy ? adjacentSeat.bookedBy.passengerCategory : 'general'
     }
-  }));
+  })).filter(item => item.passenger.id);
 };
 
 /**

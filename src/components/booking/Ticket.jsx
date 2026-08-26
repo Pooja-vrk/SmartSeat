@@ -32,9 +32,10 @@ const Ticket = ({ booking, onDownload, onShare }) => {
       : safeBooking?.schedule || {};
 
   const route =
+    (safeBooking?.routeId && typeof safeBooking.routeId === 'object' ? safeBooking.routeId : null) ||
     safeBooking?.route ||
+    (schedule?.routeId && typeof schedule.routeId === 'object' ? schedule.routeId : null) ||
     schedule?.route ||
-    schedule?.routeId ||
     {};
 
   const bus =

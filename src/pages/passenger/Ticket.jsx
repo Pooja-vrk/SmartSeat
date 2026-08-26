@@ -33,8 +33,6 @@ const TicketPage = () => {
   const handleDownload = () => {
     if (!booking) return;
 
-    // Build a plain-text ticket summary and trigger a browser print-to-PDF.
-    // This avoids adding a PDF library dependency.
     const b = booking;
 
     const schedule =
@@ -43,7 +41,11 @@ const TicketPage = () => {
         : b.schedule || {};
 
     const route =
-      b.route || schedule?.routeId || {};
+      (b.routeId && typeof b.routeId === 'object' ? b.routeId : null) ||
+      b.route ||
+      (schedule?.routeId && typeof schedule.routeId === 'object' ? schedule.routeId : null) ||
+      schedule?.route ||
+      {};
 
     const bus =
       b.bus || schedule?.busId || {};
@@ -75,70 +77,50 @@ const TicketPage = () => {
       : 'N/A';
 
     const content = [
-      '╔══════════════════════════════════════╗',
-      '         SmartSeat — Digital Ticket     ',
-      '╚══════════════════════════════════════╝',
+      '========================================',
+      '        SmartSeat — Digital Ticket       ',
+      '========================================',
       '',
       `Booking ID:    ${b.bookingId || b._id || 'N/A'}`,
       `Status:        ${b.bookingStatus || 'confirmed'}`,
+      `Payment:       ${b.paymentStatus || 'completed'}`,
       '',
-      '── PASSENGER ───────────────────────────',
+      '-- PASSENGER INFORMATION ---------------',
       `Name:          ${passenger.name || 'N/A'}`,
       `Phone:         ${passenger.phone || 'N/A'}`,
       '',
-      '── JOURNEY ─────────────────────────────',
+      '-- JOURNEY INFORMATION -----------------',
       `From:          ${from}`,
       `To:            ${to}`,
       `Date:          ${travelDate}`,
       `Departure:     ${schedule?.departureTime || 'N/A'}`,
       `Arrival:       ${schedule?.arrivalTime   || 'N/A'}`,
       '',
-      '── BUS ──────────────────────────────────',
+      '-- BUS INFORMATION ---------------------',
       `Operator:      ${operator}`,
       `Bus Number:    ${busNo}`,
       `Bus Type:      ${bus?.busType || 'N/A'}`,
       '',
-      '── SEAT ─────────────────────────────────',
+      '-- SEAT INFORMATION --------------------',
       `Seat Number:   ${b.seatNumber || 'N/A'}`,
       '',
-      '── FARE ─────────────────────────────────',
+      '-- FARE DETAILS ------------------------',
       fareLines,
       '',
-      '─────────────────────────────────────────',
+      '========================================',
       'Please carry a valid ID proof for boarding',
-      'Support: +91 1800-123-4567',
+      'For support: +91 1800-123-4567',
     ].join('\n');
 
-    // Open a small printable window
-    const printWindow = window.open('', '_blank', 'width=520,height=700');
-    if (!printWindow) {
-      // Fallback: download as .txt if popup blocked
-      const blob = new Blob([content], { type: 'text/plain' });
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement('a');
-      a.href     = url;
-      a.download = `SmartSeat-Ticket-${b.bookingId || 'ticket'}.txt`;
-      a.click();
-      URL.revokeObjectURL(url);
-      return;
-    }
-
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>SmartSeat Ticket — ${b.bookingId || ''}</title>
-        <style>
-          body { font-family: monospace; white-space: pre; padding: 24px; font-size: 13px; line-height: 1.6; }
-          @media print { body { padding: 8px; } }
-        </style>
-      </head>
-      <body>${content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `SmartSeat-Ticket-${b.bookingId || b._id || 'ticket'}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const handleShare = async () => {
@@ -149,7 +131,12 @@ const TicketPage = () => {
       b.scheduleId && typeof b.scheduleId === 'object'
         ? b.scheduleId
         : b.schedule || {};
-    const route = b.route || schedule?.routeId || {};
+    const route =
+      (b.routeId && typeof b.routeId === 'object' ? b.routeId : null) ||
+      b.route ||
+      (schedule?.routeId && typeof schedule.routeId === 'object' ? schedule.routeId : null) ||
+      schedule?.route ||
+      {};
     const bus   = b.bus   || schedule?.busId   || {};
 
     const from  = route?.source || route?.from || 'N/A';
@@ -162,7 +149,7 @@ const TicketPage = () => {
     });
 
     const shareText =
-      `SmartSeat Booking\n` +
+      `SmartSeat Booking Ticket\n` +
       `Booking ID: ${b.bookingId || b._id || 'N/A'}\n` +
       `Route: ${from} → ${to}\n` +
       `Date: ${date}\n` +
@@ -177,18 +164,15 @@ const TicketPage = () => {
           text: shareText,
         });
       } catch (err) {
-        // User cancelled share — not an error
         if (err?.name !== 'AbortError') {
           console.warn('Share failed:', err);
         }
       }
     } else {
-      // Fallback: copy to clipboard
       try {
         await navigator.clipboard.writeText(shareText);
         alert('Booking details copied to clipboard!');
       } catch {
-        // Last resort: select text from a temporary element
         const ta = document.createElement('textarea');
         ta.value = shareText;
         ta.style.position = 'fixed';

@@ -86,6 +86,10 @@ class BookingService {
       // Calculate GST on the schedule fare
       const { baseFare, gstRate, gstAmount, totalAmount } = calculateGST(schedule.fare);
 
+      // Fetch route info for response
+      const Route = require('../models/Route');
+      const route = await Route.findById(schedule.routeId).session(session);
+
       // Create booking
       const booking = await Booking.create([{
         bookingId,
@@ -99,8 +103,8 @@ class BookingService {
         gstRate,
         gstAmount,
         fare: totalAmount,        // fare = total (baseFare + gstAmount) — kept for backward compat
-        paymentStatus: 'pending',
-        bookingStatus: 'pending',
+        paymentStatus: 'completed',
+        bookingStatus: 'confirmed',
         smartSeatMonitoring
       }], { session });
 
@@ -138,6 +142,8 @@ class BookingService {
         success: true,
         data: {
           ...booking[0].toObject(),
+          routeId: route ? route.toObject() : booking[0].routeId,
+          route: route ? route.toObject() : null,
           schedule: schedule.toObject(),
           bus: bus.toObject()
         }

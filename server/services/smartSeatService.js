@@ -16,6 +16,10 @@ class SmartSeatService {
    */
   async handleAdjacentSeatChange(scheduleId, seatNumber, bookingId) {
     try {
+      // Find current newly created booking to get passenger name
+      const newBooking = await Booking.findById(bookingId).populate('userId', 'name');
+      const newBookerName = newBooking?.passengerDetails?.name || newBooking?.userId?.name || 'A passenger';
+
       // Find adjacent passengers
       const adjacentPassengers = await findAdjacentPassenger(scheduleId, seatNumber);
       
@@ -26,40 +30,57 @@ class SmartSeatService {
       let notifiedCount = 0;
 
       for (const adjacent of adjacentPassengers) {
+        // Skip if recipient is the same user who just booked
+        if (newBooking && newBooking.userId && adjacent.passenger.id.toString() === newBooking.userId._id.toString()) {
+          continue;
+        }
+
         // Check if passenger has SmartSeat monitoring enabled
         const preference = await SmartSeatPreference.findOne({
           userId: adjacent.passenger.id
         });
 
-        if (preference && preference.enabled && preference.notifyAdjacentSeatChange) {
-          // Create notification
-          const notification = await Notification.create({
+        // Default to enabled if preference record doesn't exist yet
+        const isEnabled = !preference || (preference.enabled && preference.notifyAdjacentSeatChange);
+
+        if (isEnabled) {
+          // Check for existing notification for this booking & recipient
+          const existingNotif = await Notification.findOne({
             userId: adjacent.passenger.id,
-            type: 'smartseat',
-            title: 'Adjacent Seat Update',
-            message: `Your adjacent seat ${seatNumber} has been booked.`,
             bookingId,
-            scheduleId,
-            seatNumber: adjacent.seatNumber,
-            adjacentSeatNumber: seatNumber,
-            category: 'SmartSeat',
-            metadata: {
-              adjacentPassengerCategory: adjacent.passenger.passengerCategory
-            }
+            type: 'smartseat'
           });
 
-          // Emit socket event (will be handled by socket service)
-          this.emitSmartSeatEvent(adjacent.passenger.id, {
-            notificationId: notification._id,
-            bookingId,
-            scheduleId,
-            currentSeat: adjacent.seatNumber,
-            adjacentSeat: seatNumber,
-            newStatus: 'booked',
-            message: 'Your adjacent seat has been booked'
-          });
+          if (!existingNotif) {
+            // Create notification
+            const notification = await Notification.create({
+              userId: adjacent.passenger.id,
+              type: 'smartseat',
+              title: 'Adjacent Seat Booked',
+              message: `${newBookerName} booked seat ${seatNumber} next to your seat ${adjacent.seatNumber}.`,
+              bookingId,
+              scheduleId,
+              seatNumber: adjacent.seatNumber,
+              adjacentSeatNumber: seatNumber,
+              category: 'SmartSeat',
+              metadata: {
+                adjacentPassengerCategory: adjacent.passenger.passengerCategory
+              }
+            });
 
-          notifiedCount++;
+            // Emit socket event (will be handled by socket service)
+            this.emitSmartSeatEvent(adjacent.passenger.id, {
+              notificationId: notification._id,
+              bookingId,
+              scheduleId,
+              currentSeat: adjacent.seatNumber,
+              adjacentSeat: seatNumber,
+              newStatus: 'booked',
+              message: `${newBookerName} booked seat ${seatNumber} next to your seat ${adjacent.seatNumber}.`
+            });
+
+            notifiedCount++;
+          }
         }
       }
 

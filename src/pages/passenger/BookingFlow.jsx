@@ -637,6 +637,159 @@ const BookingFlow = () => {
     setStep(4);
   };
 
+  const handleDownloadTicket = () => {
+    const b = bookingResult || pendingBooking;
+    if (!b) return;
+
+    const schedule =
+      b.scheduleId && typeof b.scheduleId === 'object'
+        ? b.scheduleId
+        : b.schedule || {};
+
+    const route =
+      (b.routeId && typeof b.routeId === 'object' ? b.routeId : null) ||
+      b.route ||
+      (schedule?.routeId && typeof schedule.routeId === 'object' ? schedule.routeId : null) ||
+      schedule?.route ||
+      {};
+
+    const bus = b.bus || schedule?.busId || {};
+    const passenger = b.passengerDetails || {};
+
+    const from  = route?.source || route?.from || 'N/A';
+    const to    = route?.destination || route?.to || 'N/A';
+    const busNo = bus?.busNumber || 'N/A';
+    const operator = bus?.operatorName || 'N/A';
+
+    const baseFare  = Number(b.baseFare  ?? 0);
+    const gstRate   = Number(b.gstRate   ?? 0);
+    const gstAmount = Number(b.gstAmount ?? 0);
+    const totalFare = Number(b.fare      ?? 0);
+    const hasGST    = baseFare > 0 && gstRate > 0;
+
+    const fmt = (n) =>
+      n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    const fareLines = hasGST
+      ? `Base Fare:    ₹${fmt(baseFare)}\nGST (${gstRate}%): ₹${fmt(gstAmount)}\n${'─'.repeat(28)}\nTOTAL:        ₹${fmt(totalFare)}`
+      : `TOTAL:        ₹${fmt(totalFare)}`;
+
+    const travelDate = schedule?.travelDate
+      ? new Date(schedule.travelDate).toLocaleDateString('en-IN', {
+          weekday: 'short', day: '2-digit', month: 'short', year: 'numeric'
+        })
+      : 'N/A';
+
+    const content = [
+      '========================================',
+      '        SmartSeat — Digital Ticket       ',
+      '========================================',
+      '',
+      `Booking ID:    ${b.bookingId || b._id || 'N/A'}`,
+      `Status:        ${b.bookingStatus || 'confirmed'}`,
+      `Payment:       ${b.paymentStatus || 'completed'}`,
+      '',
+      '-- PASSENGER INFORMATION ---------------',
+      `Name:          ${passenger.name || 'N/A'}`,
+      `Phone:         ${passenger.phone || 'N/A'}`,
+      '',
+      '-- JOURNEY INFORMATION -----------------',
+      `From:          ${from}`,
+      `To:            ${to}`,
+      `Date:          ${travelDate}`,
+      `Departure:     ${schedule?.departureTime || 'N/A'}`,
+      `Arrival:       ${schedule?.arrivalTime   || 'N/A'}`,
+      '',
+      '-- BUS INFORMATION ---------------------',
+      `Operator:      ${operator}`,
+      `Bus Number:    ${busNo}`,
+      `Bus Type:      ${bus?.busType || 'N/A'}`,
+      '',
+      '-- SEAT INFORMATION --------------------',
+      `Seat Number:   ${b.seatNumber || 'N/A'}`,
+      '',
+      '-- FARE DETAILS ------------------------',
+      fareLines,
+      '',
+      '========================================',
+      'Please carry a valid ID proof for boarding',
+      'For support: +91 1800-123-4567',
+    ].join('\n');
+
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `SmartSeat-Ticket-${b.bookingId || b._id || 'ticket'}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleShareTicket = async () => {
+    const b = bookingResult || pendingBooking;
+    if (!b) return;
+
+    const schedule =
+      b.scheduleId && typeof b.scheduleId === 'object'
+        ? b.scheduleId
+        : b.schedule || {};
+    const route =
+      (b.routeId && typeof b.routeId === 'object' ? b.routeId : null) ||
+      b.route ||
+      (schedule?.routeId && typeof schedule.routeId === 'object' ? schedule.routeId : null) ||
+      schedule?.route ||
+      {};
+    const bus   = b.bus   || schedule?.busId   || {};
+
+    const from  = route?.source || route?.from || 'N/A';
+    const to    = route?.destination || route?.to || 'N/A';
+    const date  = schedule?.travelDate
+      ? new Date(schedule.travelDate).toLocaleDateString('en-IN')
+      : 'N/A';
+    const total = Number(b.fare ?? 0).toLocaleString('en-IN', {
+      minimumFractionDigits: 2, maximumFractionDigits: 2
+    });
+
+    const shareText =
+      `SmartSeat Booking Ticket\n` +
+      `Booking ID: ${b.bookingId || b._id || 'N/A'}\n` +
+      `Route: ${from} → ${to}\n` +
+      `Date: ${date}\n` +
+      `Bus: ${bus?.busNumber || 'N/A'}\n` +
+      `Seat: ${b.seatNumber || 'N/A'}\n` +
+      `Total: ₹${total}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `SmartSeat Ticket — ${b.bookingId || ''}`,
+          text: shareText,
+        });
+      } catch (err) {
+        if (err?.name !== 'AbortError') {
+          console.warn('Share failed:', err);
+        }
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(shareText);
+        alert('Booking details copied to clipboard!');
+      } catch {
+        const ta = document.createElement('textarea');
+        ta.value = shareText;
+        ta.style.position = 'fixed';
+        ta.style.opacity  = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        alert('Booking details copied to clipboard!');
+      }
+    }
+  };
+
   // ==========================================================
   // ALTERNATIVE SEATS
   // ==========================================================
@@ -994,17 +1147,9 @@ const BookingFlow = () => {
                   bookingResult
                 }
 
-                onDownload={() =>
-                  console.log(
-                    'Download ticket'
-                  )
-                }
+                onDownload={handleDownloadTicket}
 
-                onShare={() =>
-                  console.log(
-                    'Share ticket'
-                  )
-                }
+                onShare={handleShareTicket}
               />
             )}
 

@@ -47,8 +47,9 @@ exports.getMyBookings = asyncHandler(async (req, res, next) => {
 exports.getBooking = asyncHandler(async (req, res, next) => {
   const result = await bookingService.getBookingById(req.params.id);
 
-  // Check ownership
-  if (result.data.userId.toString() !== req.user.id && req.user.role !== 'admin') {
+  // Check ownership (userId may be populated as an object)
+  const bookingUserId = (result.data.userId._id || result.data.userId).toString();
+  if (bookingUserId !== req.user.id && req.user.role !== 'admin') {
     return res.status(403).json({
       success: false,
       message: 'Access denied'
