@@ -1,20 +1,36 @@
-// Contact page
+// SmartSeat - Creative Contact & Support Command Center
+
 import { useState } from 'react';
-import { Card, CardHeader, CardBody, Button, Input, Select } from '../../components/common';
-import api from '../../services/api';
-import { 
-  Mail, 
-  Phone, 
-  MapPin, 
+import { Link } from 'react-router-dom';
+
+import {
+  Mail,
+  Phone,
+  MapPin,
   Send,
   Clock,
   MessageSquare,
   Users,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Headphones,
+  Sparkles,
+  ArrowRight,
+  Radio,
+  ShieldCheck,
+  Zap,
+  Navigation,
+  LifeBuoy,
+  ChevronRight
 } from 'lucide-react';
 
+import { Card, CardHeader, CardBody, Button, Input, Select } from '../../components/common';
+import api from '../../services/api';
+
+import './Contact.css';
+
 const Contact = () => {
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -22,260 +38,701 @@ const Contact = () => {
     subject: '',
     message: ''
   });
+
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     setError('');
     setSubmitting(true);
 
     try {
+
       const response = await api.post('/contact', {
-        name:    formData.name.trim(),
-        email:   formData.email.trim(),
-        phone:   formData.phone.trim(),
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone.trim(),
         subject: formData.subject,
         message: formData.message.trim()
       });
 
       if (response?.success) {
+
         setSubmitted(true);
-        setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
+
+        setFormData({
+          name: '',
+          email: '',
+          phone: '',
+          subject: '',
+          message: ''
+        });
+
       } else {
-        setError(response?.message || 'Failed to send message. Please try again.');
+
+        setError(
+          response?.message ||
+          'Failed to send message. Please try again.'
+        );
+
       }
+
     } catch (err) {
+
       setError(
         err?.message ||
         'Unable to send message. Please check your connection and try again.'
       );
+
     } finally {
+
       setSubmitting(false);
+
     }
   };
 
+
   const handleChange = (e) => {
+
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
+
   };
 
+
   return (
-    <div className="max-w-7xl mx-auto px-4 py-12">
-      <div className="text-center mb-12">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">Contact Us</h1>
-        <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-          Have questions? We'd love to hear from you. Send us a message and we'll respond as soon as possible.
+    <div className="smart-contact-page">
+
+      {/* =====================================================
+          BACKGROUND DECORATIONS
+      ====================================================== */}
+
+      <div className="contact-orb contact-orb-one" />
+      <div className="contact-orb contact-orb-two" />
+      <div className="contact-orb contact-orb-three" />
+
+      <div className="contact-grid-overlay" />
+
+
+      {/* =====================================================
+          HERO
+      ====================================================== */}
+
+      <section className="contact-hero">
+
+        <div className="contact-status-pill">
+
+          <span className="status-live-dot" />
+
+          <span>SMARTSEAT SUPPORT NETWORK</span>
+
+          <Radio size={14} />
+
+          <strong>ONLINE</strong>
+
+        </div>
+
+
+        <div className="contact-hero-icon">
+
+          <Headphones />
+
+          <span className="hero-icon-pulse" />
+
+        </div>
+
+
+        <h1>
+          We're Here to
+          <span> Move You Forward.</span>
+        </h1>
+
+
+        <p>
+          Questions about your booking, seats, payments, or journey?
+          Connect with the SmartSeat support team and we'll help you
+          get back on track.
         </p>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Contact Information */}
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <h3 className="text-lg font-semibold text-gray-900">Contact Information</h3>
-            </CardHeader>
-            <CardBody>
-              <div className="space-y-4">
-                <div className="flex items-start space-x-3">
-                  <Mail className="w-5 h-5 text-primary-600 mt-1 flex-shrink-0" />
-                  <div>
-                    <p className="font-medium text-gray-900">Email</p>
-                    <p className="text-gray-600">support@smartseat.com</p>
-                  </div>
-                </div>
 
-                <div className="flex items-start space-x-3">
-                  <Phone className="w-5 h-5 text-primary-600 mt-1 flex-shrink-0" />
-                  <div>
-                    <p className="font-medium text-gray-900">Phone</p>
-                    <p className="text-gray-600">+91 1800-123-4567</p>
-                    <p className="text-sm text-gray-500">Toll-free in India</p>
-                  </div>
-                </div>
+        <div className="contact-hero-actions">
 
-                <div className="flex items-start space-x-3">
-                  <MapPin className="w-5 h-5 text-primary-600 mt-1 flex-shrink-0" />
-                  <div>
-                    <p className="font-medium text-gray-900">Address</p>
-                    <p className="text-gray-600">
-                      SmartSeat Headquarters<br />
-                      Mumbai, Maharashtra<br />
-                      India - 400001
-                    </p>
-                  </div>
-                </div>
+          <Link
+            to="/help"
+            className="contact-secondary-button"
+          >
+            <LifeBuoy size={17} />
+            Explore Help Center
+            <ArrowRight size={16} />
+          </Link>
+
+          <a
+            href="mailto:support@smartseat.com"
+            className="contact-email-button"
+          >
+            <Mail size={17} />
+            Email Support
+          </a>
+
+        </div>
+
+      </section>
+
+
+      {/* =====================================================
+          SUPPORT TELEMETRY
+      ====================================================== */}
+
+      <section className="contact-telemetry">
+
+        <div className="telemetry-card">
+
+          <div className="telemetry-icon telemetry-green">
+            <Zap />
+          </div>
+
+          <div>
+            <span>RESPONSE SPEED</span>
+            <strong>~ 2 Hours</strong>
+            <small>Average support response</small>
+          </div>
+
+        </div>
+
+
+        <div className="telemetry-card">
+
+          <div className="telemetry-icon telemetry-blue">
+            <Clock />
+          </div>
+
+          <div>
+            <span>SUPPORT WINDOW</span>
+            <strong>24 / 7</strong>
+            <small>Emergency assistance available</small>
+          </div>
+
+        </div>
+
+
+        <div className="telemetry-card">
+
+          <div className="telemetry-icon telemetry-orange">
+            <ShieldCheck />
+          </div>
+
+          <div>
+            <span>SUPPORT CHANNEL</span>
+            <strong>SECURE</strong>
+            <small>Your information stays protected</small>
+          </div>
+
+        </div>
+
+      </section>
+
+
+      {/* =====================================================
+          MAIN CONTACT AREA
+      ====================================================== */}
+
+      <main className="contact-main">
+
+        {/* ===================================================
+            LEFT INFORMATION PANEL
+        ==================================================== */}
+
+        <div className="contact-info-column">
+
+
+          {/* Contact Hub */}
+          <div className="contact-glass-card contact-hub-card">
+
+            <div className="contact-card-heading">
+
+              <div className="heading-icon">
+                <Navigation size={20} />
               </div>
-            </CardBody>
-          </Card>
 
-          <Card>
-            <CardHeader>
-              <h3 className="text-lg font-semibold text-gray-900">Support Hours</h3>
-            </CardHeader>
-            <CardBody>
-              <div className="space-y-3">
-                <div className="flex items-center space-x-3">
-                  <Clock className="w-5 h-5 text-primary-600" />
-                  <div>
-                    <p className="font-medium text-gray-900">24/7 Support</p>
-                    <p className="text-sm text-gray-600">Always available for emergencies</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <MessageSquare className="w-5 h-5 text-primary-600" />
-                  <div>
-                    <p className="font-medium text-gray-900">Live Chat</p>
-                    <p className="text-sm text-gray-600">9 AM - 9 PM IST</p>
-                  </div>
-                </div>
+              <div>
+                <span>CONTACT HUB</span>
+                <h2>Reach SmartSeat</h2>
               </div>
-            </CardBody>
-          </Card>
 
-          <Card className="bg-primary-50 border-primary-200">
-            <CardHeader>
-              <div className="flex items-center space-x-2">
-                <Users className="w-5 h-5 text-primary-600" />
-                <h3 className="text-lg font-semibold text-primary-900">Quick Support</h3>
+            </div>
+
+
+            <div className="contact-info-list">
+
+              {/* Email */}
+              <a
+                href="mailto:support@smartseat.com"
+                className="contact-info-item"
+              >
+
+                <div className="info-item-icon email-icon">
+                  <Mail size={19} />
+                </div>
+
+                <div className="info-item-content">
+                  <span>EMAIL SUPPORT</span>
+                  <strong>support@smartseat.com</strong>
+                  <small>For general enquiries & assistance</small>
+                </div>
+
+                <ChevronRight className="info-arrow" size={18} />
+
+              </a>
+
+
+              {/* Phone */}
+              <a
+                href="tel:+9118001234567"
+                className="contact-info-item"
+              >
+
+                <div className="info-item-icon phone-icon">
+                  <Phone size={19} />
+                </div>
+
+                <div className="info-item-content">
+                  <span>SUPPORT LINE</span>
+                  <strong>+91 1800-123-4567</strong>
+                  <small>Toll-free support in India</small>
+                </div>
+
+                <ChevronRight className="info-arrow" size={18} />
+
+              </a>
+
+
+              {/* Location */}
+              <div className="contact-info-item">
+
+                <div className="info-item-icon location-icon">
+                  <MapPin size={19} />
+                </div>
+
+                <div className="info-item-content">
+                  <span>HEADQUARTERS</span>
+                  <strong>Mumbai, Maharashtra</strong>
+                  <small>India - 400001</small>
+                </div>
+
               </div>
-            </CardHeader>
-            <CardBody>
-              <p className="text-sm text-primary-800 mb-3">
-                For booking-related queries, please have your booking ID ready for faster assistance.
+
+            </div>
+
+          </div>
+
+
+          {/* Support Hours */}
+          <div className="contact-glass-card support-hours-card">
+
+            <div className="contact-card-heading">
+
+              <div className="heading-icon purple-heading">
+                <Clock size={20} />
+              </div>
+
+              <div>
+                <span>AVAILABILITY</span>
+                <h2>Support Hours</h2>
+              </div>
+
+            </div>
+
+
+            <div className="hours-row">
+
+              <div className="hours-icon">
+                <Headphones size={18} />
+              </div>
+
+              <div>
+                <strong>24 / 7 Emergency Support</strong>
+                <span>Always available when you need us</span>
+              </div>
+
+              <div className="available-badge">
+                AVAILABLE
+              </div>
+
+            </div>
+
+
+            <div className="hours-row">
+
+              <div className="hours-icon">
+                <MessageSquare size={18} />
+              </div>
+
+              <div>
+                <strong>Live Chat</strong>
+                <span>9:00 AM – 9:00 PM IST</span>
+              </div>
+
+            </div>
+
+          </div>
+
+
+          {/* Quick Support */}
+          <div className="quick-support-card">
+
+            <div className="quick-support-decoration" />
+
+            <div className="quick-support-icon">
+              <Users size={23} />
+            </div>
+
+            <div className="quick-support-content">
+
+              <span>QUICK SUPPORT</span>
+
+              <h3>Booking assistance?</h3>
+
+              <p>
+                Keep your booking ID ready so our team can
+                locate your journey faster.
               </p>
-              <div className="text-sm text-primary-700">
-                <p>Average response time: 2 hours</p>
-                <p>Emergency response: 30 minutes</p>
-              </div>
-            </CardBody>
-          </Card>
+
+            </div>
+
+          </div>
+
         </div>
 
-        {/* Contact Form */}
-        <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <h3 className="text-lg font-semibold text-gray-900">Send us a Message</h3>
-            </CardHeader>
-            <CardBody>
-              {submitted ? (
-                <div className="text-center py-8">
-                  <CheckCircle className="w-16 h-16 mx-auto mb-4 text-green-600" />
-                  <h4 className="text-xl font-semibold text-gray-900 mb-2">Message Sent!</h4>
-                  <p className="text-gray-600">We'll get back to you within 24 hours.</p>
-                  <Button
-                    variant="outline"
-                    className="mt-4"
-                    onClick={() => setSubmitted(false)}
-                  >
-                    Send Another Message
-                  </Button>
+
+        {/* ===================================================
+            CONTACT FORM
+        ==================================================== */}
+
+        <div className="contact-form-wrapper">
+
+          <div className="contact-form-header">
+
+            <div>
+
+              <span className="form-kicker">
+                <Sparkles size={14} />
+                SUPPORT REQUEST
+              </span>
+
+              <h2>
+                Tell us what happened.
+              </h2>
+
+              <p>
+                Send a message to our support team and we'll
+                take it from there.
+              </p>
+
+            </div>
+
+
+            <div className="form-live-indicator">
+
+              <span />
+
+              LIVE
+
+            </div>
+
+          </div>
+
+
+          <div className="contact-form-card">
+
+            {submitted ? (
+
+              /* =============================================
+                 SUCCESS STATE
+              ============================================== */
+
+              <div className="contact-success">
+
+                <div className="success-animation">
+
+                  <div className="success-ring" />
+
+                  <CheckCircle size={58} />
+
                 </div>
-              ) : (
-                <form onSubmit={handleSubmit}>
-                  {error && (
-                    <div className="flex items-start space-x-2 p-3 mb-4 bg-red-50 border border-red-200 rounded-lg">
-                      <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                      <p className="text-sm text-red-700">{error}</p>
-                    </div>
+
+
+                <span className="success-label">
+                  TRANSMISSION COMPLETE
+                </span>
+
+                <h3>
+                  Message received!
+                </h3>
+
+                <p>
+                  Your support request has been sent successfully.
+                  Our team will get back to you within 24 hours.
+                </p>
+
+
+                <div className="success-details">
+
+                  <div>
+                    <Clock size={17} />
+                    <span>Expected response: within 24 hours</span>
+                  </div>
+
+                  <div>
+                    <ShieldCheck size={17} />
+                    <span>Your request has been securely received</span>
+                  </div>
+
+                </div>
+
+
+                <Button
+                  variant="outline"
+                  className="send-another-button"
+                  onClick={() => setSubmitted(false)}
+                >
+                  Send Another Message
+                </Button>
+
+              </div>
+
+            ) : (
+
+              /* =============================================
+                 FORM
+              ============================================== */
+
+              <form
+                onSubmit={handleSubmit}
+                className="smart-contact-form"
+              >
+
+                {error && (
+
+                  <div className="contact-error">
+
+                    <AlertCircle size={19} />
+
+                    <p>{error}</p>
+
+                  </div>
+
+                )}
+
+
+                {/* Name + Email */}
+
+                <div className="contact-form-grid">
+
+                  <Input
+                    label="Your Name"
+                    placeholder="John Doe"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    required
+                  />
+
+                  <Input
+                    label="Email Address"
+                    placeholder="john@example.com"
+                    name="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    required
+                  />
+
+                </div>
+
+
+                {/* Phone + Subject */}
+
+                <div className="contact-form-grid">
+
+                  <Input
+                    label="Phone Number"
+                    placeholder="+91 98765 43210"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleChange}
+                  />
+
+                  <Select
+                    label="Subject"
+                    placeholder="Select a topic"
+                    name="subject"
+                    value={formData.subject}
+                    onChange={handleChange}
+                    required
+                    options={[
+                      {
+                        value: 'booking',
+                        label: 'Booking Related'
+                      },
+                      {
+                        value: 'payment',
+                        label: 'Payment Issue'
+                      },
+                      {
+                        value: 'technical',
+                        label: 'Technical Support'
+                      },
+                      {
+                        value: 'feedback',
+                        label: 'Feedback'
+                      },
+                      {
+                        value: 'partnership',
+                        label: 'Partnership Inquiry'
+                      },
+                      {
+                        value: 'other',
+                        label: 'Other'
+                      }
+                    ]}
+                  />
+
+                </div>
+
+
+                {/* Message */}
+
+                <div className="smart-message-field">
+
+                  <label>
+                    Message
+                    <span>Tell us everything</span>
+                  </label>
+
+                  <textarea
+                    name="message"
+                    value={formData.message}
+                    onChange={handleChange}
+                    rows={7}
+                    placeholder="Describe how we can help you..."
+                    required
+                  />
+
+                  <div className="message-counter">
+                    <span>SUPPORT MESSAGE</span>
+                    <span>{formData.message.length} characters</span>
+                  </div>
+
+                </div>
+
+
+                {/* Submit */}
+
+                <button
+                  type="submit"
+                  className="smart-submit-button"
+                  disabled={submitting}
+                >
+
+                  {submitting ? (
+
+                    <>
+                      <span className="submit-spinner" />
+                      Sending Request...
+                    </>
+
+                  ) : (
+
+                    <>
+                      Send Support Request
+                      <Send size={18} />
+                    </>
+
                   )}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <Input
-                      label="Your Name"
-                      placeholder="John Doe"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleChange}
-                      required
-                    />
-                    <Input
-                      label="Email Address"
-                      placeholder="john@example.com"
-                      name="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={handleChange}
-                      required
-                    />
-                  </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <Input
-                      label="Phone Number"
-                      placeholder="+91 98765 43210"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleChange}
-                    />
-                    <Select
-                      label="Subject"
-                      placeholder="Select a topic"
-                      name="subject"
-                      value={formData.subject}
-                      onChange={handleChange}
-                      required
-                      options={[
-                        { value: 'booking', label: 'Booking Related' },
-                        { value: 'payment', label: 'Payment Issue' },
-                        { value: 'technical', label: 'Technical Support' },
-                        { value: 'feedback', label: 'Feedback' },
-                        { value: 'partnership', label: 'Partnership Inquiry' },
-                        { value: 'other', label: 'Other' }
-                      ]}
-                    />
-                  </div>
+                </button>
 
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Message
-                    </label>
-                <textarea
-                      name="message"
-                      value={formData.message}
-                      onChange={handleChange}
-                      rows={6}
-                      className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
-                      placeholder="How can we help you?"
-                      required
-                    />
-                  </div>
 
-                  <Button
-                    type="submit"
-                    variant="primary"
-                    className="w-full"
-                    icon={Send}
-                    loading={submitting}
-                    disabled={submitting}
-                  >
-                    {submitting ? 'Sending...' : 'Send Message'}
-                  </Button>
-                </form>
-              )}
-            </CardBody>
-          </Card>
+                <div className="form-security-note">
 
-          {/* FAQ Link */}
-          <Card className="mt-6">
-            <CardBody>
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="font-semibold text-gray-900">Have a Question?</h4>
-                  <p className="text-sm text-gray-600">Check our FAQ section for quick answers</p>
+                  <ShieldCheck size={15} />
+
+                  <span>
+                    Your information is transmitted securely
+                    and used only to respond to your request.
+                  </span>
+
                 </div>
-                <a href="/help" className="text-primary-600 hover:text-primary-700 font-medium">
-                  View FAQ →
-                </a>
-              </div>
-            </CardBody>
-          </Card>
+
+              </form>
+
+            )}
+
+          </div>
+
+
+          {/* FAQ */}
+          <Link
+            to="/help"
+            className="contact-faq-banner"
+          >
+
+            <div className="faq-banner-icon">
+              <LifeBuoy size={21} />
+            </div>
+
+            <div>
+
+              <span>LOOKING FOR A QUICK ANSWER?</span>
+
+              <strong>
+                Visit our Help & FAQ Center
+              </strong>
+
+            </div>
+
+            <ArrowRight size={20} />
+
+          </Link>
+
         </div>
-      </div>
+
+      </main>
+
+
+      {/* =====================================================
+          BOTTOM TRUST SECTION
+      ====================================================== */}
+
+      <section className="contact-bottom-trust">
+
+        <div>
+          <ShieldCheck />
+          <span>SECURE SUPPORT</span>
+        </div>
+
+        <div>
+          <Zap />
+          <span>FAST RESPONSES</span>
+        </div>
+
+        <div>
+          <Headphones />
+          <span>HUMAN ASSISTANCE</span>
+        </div>
+
+        <div>
+          <Navigation />
+          <span>JOURNEY FOCUSED</span>
+        </div>
+
+      </section>
+
     </div>
   );
 };

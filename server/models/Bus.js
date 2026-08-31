@@ -16,7 +16,15 @@ const busSchema = new mongoose.Schema({
   busType: {
     type: String,
     required: [true, 'Please provide bus type'],
-    enum: ['AC Sleeper', 'AC Seater', 'Non-AC Sleeper', 'Non-AC Seater', 'AC Multi-Axle']
+    enum: [
+      'AC Sleeper',
+      'Non-AC Sleeper',
+      'AC Semi Sleeper',
+      'Non-AC Semi Sleeper',
+      'AC Seater',
+      'Non-AC Seater',
+      'AC Multi-Axle'
+    ]
   },
   registrationNumber: {
     type: String,

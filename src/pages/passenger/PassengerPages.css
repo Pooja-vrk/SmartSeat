@@ -1,0 +1,121 @@
+/* SmartSeat Dashboard, My Bookings & Profile Mobility UI CSS - Classy & Premium Aesthetic */
+
+.passenger-page-container {
+  background: 
+    radial-gradient(circle at 10% 10%, rgba(34, 211, 238, 0.06), transparent 28%),
+    radial-gradient(circle at 90% 80%, rgba(45, 212, 191, 0.04), transparent 28%),
+    #f8fafc;
+  min-height: 100vh;
+}
+
+/* STATS CARDS - CLASSY SAAS STYLE */
+.stats-card-3d {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 1.25rem;
+  padding: 1.5rem;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+.stats-card-3d:hover {
+  transform: translateY(-3px);
+  border-color: rgba(34, 211, 238, 0.4);
+  box-shadow: 
+    0 15px 35px rgba(15, 23, 42, 0.08),
+    0 0 15px rgba(34, 211, 238, 0.1);
+}
+
+.stats-icon-cyan {
+  background: rgba(34, 211, 238, 0.1);
+  color: #0891b2;
+  border: 1px solid rgba(34, 211, 238, 0.25);
+}
+
+.stats-icon-green {
+  background: rgba(16, 185, 129, 0.1);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.stats-icon-teal {
+  background: rgba(45, 212, 191, 0.1);
+  color: #0d9488;
+  border: 1px solid rgba(45, 212, 191, 0.25);
+}
+
+/* UPCOMING TRIP HERO CARD */
+.upcoming-trip-card {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-left: 4px solid #22d3ee;
+  border-radius: 1.25rem;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.05);
+  transition: all 0.25s ease;
+}
+
+.upcoming-trip-card:hover {
+  border-color: rgba(34, 211, 238, 0.5);
+  box-shadow: 0 18px 35px rgba(15, 23, 42, 0.08);
+}
+
+/* ROUTE VISUALIZATION LINE */
+.route-line-cyan {
+  background: linear-gradient(90deg, #22d3ee 0%, #2dd4bf 50%, #34d399 100%);
+  height: 2px;
+  border-radius: 9999px;
+}
+
+/* BOOKING CARDS */
+.booking-card-premium {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 1.25rem;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.04);
+}
+
+.booking-card-premium:hover {
+  transform: translateY(-3px);
+  border-color: rgba(34, 211, 238, 0.35);
+  box-shadow: 
+    0 18px 32px rgba(15, 23, 42, 0.07),
+    0 0 12px rgba(34, 211, 238, 0.08);
+}
+
+/* PROFILE TABS */
+.profile-tab-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1.25rem;
+  border-radius: 0.85rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #475569;
+  transition: all 0.25s ease;
+}
+
+.profile-tab-btn:hover {
+  background: rgba(241, 245, 249, 0.8);
+  color: #0f172a;
+}
+
+.profile-tab-active {
+  background: rgba(34, 211, 238, 0.1) !important;
+  color: #0891b2 !important;
+  border: 1px solid rgba(34, 211, 238, 0.3);
+  font-weight: 700;
+}
+
+/* ACCESSIBILITY & REDUCED MOTION */
+@media (prefers-reduced-motion: reduce) {
+  .stats-card-3d:hover,
+  .booking-card-premium:hover,
+  .upcoming-trip-card:hover {
+    transform: none !important;
+  }
+}

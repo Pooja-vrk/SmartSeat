@@ -1,4 +1,4 @@
-// BookingSummary.jsx
+// BookingSummary.jsx - Smart Mobility Control Center Journey Panel
 
 import {
   Card,
@@ -16,6 +16,9 @@ import {
   User,
   Shield,
   IndianRupee,
+  ArrowRight,
+  Sparkles,
+  ShieldCheck
 } from 'lucide-react';
 
 import { calculateGST } from '../../config/gst';
@@ -31,53 +34,21 @@ const BookingSummary = ({
   // SAFE OBJECTS
   // ==========================================================
 
-  const schedule =
-    bus?.schedule || {};
-
-  const route =
-    bus?.route ||
-    schedule?.routeId ||
-    {};
+  const schedule = bus?.schedule || {};
+  const route = bus?.route || schedule?.routeId || {};
 
   // ==========================================================
   // SAFE DISPLAY VALUES
   // ==========================================================
 
-  const operatorName =
-    bus?.operatorName ||
-    bus?.operator ||
-    'N/A';
+  const operatorName = bus?.operatorName || bus?.operator || 'N/A';
+  const busNumber = bus?.busNumber || 'N/A';
+  const busType = bus?.busType || 'N/A';
+  const from = route?.source || route?.from || 'N/A';
+  const to = route?.destination || route?.to || 'N/A';
+  const duration = schedule?.duration || schedule?.estimatedDuration || route?.estimatedDuration || 'N/A';
 
-  const busNumber =
-    bus?.busNumber ||
-    'N/A';
-
-  const busType =
-    bus?.busType ||
-    'N/A';
-
-  const from =
-    route?.source ||
-    route?.from ||
-    'N/A';
-
-  const to =
-    route?.destination ||
-    route?.to ||
-    'N/A';
-
-  const duration =
-    schedule?.duration ||
-    schedule?.estimatedDuration ||
-    route?.estimatedDuration ||
-    'N/A';
-
-  const fare =
-    Number(
-      schedule?.fare ??
-      bus?.fare ??
-      0
-    );
+  const fare = Number(schedule?.fare ?? bus?.fare ?? 0);
 
   // GST breakdown (computed client-side for display; backend is the source of truth)
   const { gstRate, gstAmount, totalAmount } = calculateGST(fare);
@@ -87,30 +58,16 @@ const BookingSummary = ({
   // ==========================================================
 
   const formatDate = (value) => {
-    if (!value) {
-      return 'N/A';
-    }
+    if (!value) return 'N/A';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'N/A';
 
-    const date =
-      new Date(value);
-
-    if (
-      Number.isNaN(
-        date.getTime()
-      )
-    ) {
-      return 'N/A';
-    }
-
-    return date.toLocaleDateString(
-      'en-IN',
-      {
-        weekday: 'short',
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-      }
-    );
+    return date.toLocaleDateString('en-IN', {
+      weekday: 'short',
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
   };
 
   // ==========================================================
@@ -118,448 +75,208 @@ const BookingSummary = ({
   // ==========================================================
 
   const formatTime = (value) => {
-    if (!value) {
-      return 'N/A';
+    if (!value) return 'N/A';
+
+    if (typeof value === 'string' && /^\d{2}:\d{2}$/.test(value)) {
+      const [hoursString, minutesString] = value.split(':');
+      const hours = Number(hoursString);
+      const minutes = Number(minutesString);
+
+      if (Number.isNaN(hours) || Number.isNaN(minutes)) return 'N/A';
+
+      const period = hours >= 12 ? 'PM' : 'AM';
+      const displayHour = hours % 12 || 12;
+
+      return `${displayHour}:${String(minutes).padStart(2, '0')} ${period}`;
     }
 
-    // Backend format:
-    // "06:00"
-    // "11:30"
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'N/A';
 
-    if (
-      typeof value === 'string' &&
-      /^\d{2}:\d{2}$/.test(value)
-    ) {
-      const [
-        hoursString,
-        minutesString,
-      ] = value.split(':');
-
-      const hours =
-        Number(hoursString);
-
-      const minutes =
-        Number(minutesString);
-
-      if (
-        Number.isNaN(hours) ||
-        Number.isNaN(minutes)
-      ) {
-        return 'N/A';
-      }
-
-      const period =
-        hours >= 12
-          ? 'PM'
-          : 'AM';
-
-      const displayHour =
-        hours % 12 || 12;
-
-      return `${displayHour}:${String(
-        minutes
-      ).padStart(2, '0')} ${period}`;
-    }
-
-    // Fallback for ISO date/time.
-    const date =
-      new Date(value);
-
-    if (
-      Number.isNaN(
-        date.getTime()
-      )
-    ) {
-      return 'N/A';
-    }
-
-    return date.toLocaleTimeString(
-      'en-IN',
-      {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true,
-      }
-    );
+    return date.toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
   };
 
-  // ==========================================================
-  // TRAVEL DATE
-  // ==========================================================
-
-  const travelDate =
-    schedule?.travelDate ||
-    bus?.travelDate ||
-    null;
-
-  // ==========================================================
-  // RENDER
-  // ==========================================================
+  const travelDate = schedule?.travelDate || bus?.travelDate || null;
 
   return (
-    <Card>
-
-      {/* ====================================================
-          HEADER
-      ==================================================== */}
-
-      <CardHeader>
-        <h3 className="text-lg font-semibold text-gray-900">
-          Booking Summary
-        </h3>
+    <Card className="bg-slate-950 border-slate-800 text-slate-100 shadow-2xl overflow-hidden">
+      {/* HEADER */}
+      <CardHeader className="bg-slate-900/90 border-b border-slate-800 p-5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-cyan-400" />
+            <h3 className="text-lg font-bold text-white uppercase tracking-wider">
+              JOURNEY CONTROL PANEL
+            </h3>
+          </div>
+          <Badge variant="primary" className="bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 text-[10px] uppercase font-mono">
+            LIVE TELEMETRY
+          </Badge>
+        </div>
       </CardHeader>
 
-      <CardBody>
-
-        <div className="space-y-4">
-
-          {/* ==================================================
-              BUS
-          ================================================== */}
-
-          <div className="p-4 bg-primary-50 rounded-lg border border-primary-200">
-
-            <div className="flex items-start gap-3">
-
-              <Bus className="w-5 h-5 text-primary-600 mt-1 flex-shrink-0" />
-
-              <div className="flex-1">
-
-                <h4 className="font-semibold text-primary-900">
-                  {operatorName}
-                </h4>
-
-                <p className="text-sm text-primary-700">
-                  {busNumber}
-                </p>
-
-                <Badge
-                  variant="info"
-                  className="mt-2"
-                >
-                  {busType}
-                </Badge>
-
-              </div>
-            </div>
+      <CardBody className="p-5 space-y-5 bg-gradient-to-b from-slate-950 to-slate-900">
+        {/* BUS OPERATOR INFO */}
+        <div className="p-4 bg-slate-900/80 rounded-xl border border-slate-800 flex items-start gap-3">
+          <div className="p-2.5 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 flex-shrink-0">
+            <Bus className="w-6 h-6" />
           </div>
-
-          {/* ==================================================
-              ROUTE
-          ================================================== */}
-
-          <div className="space-y-3">
-
-            <div className="flex items-start gap-3">
-
-              <MapPin className="w-5 h-5 text-gray-500 mt-1 flex-shrink-0" />
-
-              <div>
-
-                <p className="text-sm text-gray-600">
-                  From
-                </p>
-
-                <p className="font-semibold text-gray-900">
-                  {from}
-                </p>
-
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-
-              <MapPin className="w-5 h-5 text-gray-500 mt-1 flex-shrink-0" />
-
-              <div>
-
-                <p className="text-sm text-gray-600">
-                  To
-                </p>
-
-                <p className="font-semibold text-gray-900">
-                  {to}
-                </p>
-
-              </div>
-            </div>
-
-          </div>
-
-          {/* ==================================================
-              DATE + DURATION
-          ================================================== */}
-
-          <div className="grid grid-cols-2 gap-4">
-
-            <div className="p-3 bg-gray-50 rounded-lg">
-
-              <div className="flex items-center gap-2 mb-1">
-
-                <Calendar className="w-4 h-4 text-gray-500" />
-
-                <p className="text-xs text-gray-600">
-                  Travel Date
-                </p>
-
-              </div>
-
-              <p className="font-semibold text-gray-900 text-sm">
-                {formatDate(
-                  travelDate
-                )}
-              </p>
-
-            </div>
-
-            <div className="p-3 bg-gray-50 rounded-lg">
-
-              <div className="flex items-center gap-2 mb-1">
-
-                <Clock className="w-4 h-4 text-gray-500" />
-
-                <p className="text-xs text-gray-600">
-                  Duration
-                </p>
-
-              </div>
-
-              <p className="font-semibold text-gray-900">
-                {duration}
-              </p>
-
-            </div>
-
-          </div>
-
-          {/* ==================================================
-              DEPARTURE + ARRIVAL
-          ================================================== */}
-
-          <div className="grid grid-cols-2 gap-4">
-
-            <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-
-              <p className="text-xs text-green-700 mb-1">
-                Departure
-              </p>
-
-              <p className="font-semibold text-green-900">
-                {formatTime(
-                  schedule?.departureTime
-                )}
-              </p>
-
-            </div>
-
-            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-
-              <p className="text-xs text-blue-700 mb-1">
-                Arrival
-              </p>
-
-              <p className="font-semibold text-blue-900">
-                {formatTime(
-                  schedule?.arrivalTime
-                )}
-              </p>
-
-            </div>
-
-          </div>
-
-          {/* ==================================================
-              SEAT
-          ================================================== */}
-
-          <div className="flex items-center justify-between p-4 bg-secondary-50 rounded-lg border border-secondary-200">
-
-            <div className="flex items-center gap-3">
-
-              <Armchair className="w-5 h-5 text-secondary-600" />
-
-              <div>
-
-                <p className="text-sm text-secondary-700">
-                  Selected Seat
-                </p>
-
-                <p className="text-xl font-bold text-secondary-900">
-                  {selectedSeat ||
-                    'Not selected'}
-                </p>
-
-              </div>
-            </div>
-
-            <Badge
-              variant={
-                selectedSeat
-                  ? 'success'
-                  : 'default'
-              }
-            >
-              {selectedSeat
-                ? 'Selected'
-                : 'Pending'}
-            </Badge>
-
-          </div>
-
-          {/* ==================================================
-              PASSENGER
-          ================================================== */}
-
-          {passengerDetails && (
-            <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-
-              <div className="flex items-center gap-3 mb-3">
-
-                <User className="w-5 h-5 text-gray-500" />
-
-                <h4 className="font-semibold text-gray-900">
-                  Passenger Details
-                </h4>
-
-              </div>
-
-              <div className="space-y-2 text-sm">
-
-                <div className="flex justify-between gap-4">
-
-                  <span className="text-gray-600">
-                    Name:
-                  </span>
-
-                  <span className="font-medium text-gray-900 text-right">
-                    {passengerDetails?.name ||
-                      passengerDetails?.fullName ||
-                      'N/A'}
-                  </span>
-
-                </div>
-
-                <div className="flex justify-between gap-4">
-
-                  <span className="text-gray-600">
-                    Email:
-                  </span>
-
-                  <span className="font-medium text-gray-900 text-right">
-                    {passengerDetails?.email ||
-                      'N/A'}
-                  </span>
-
-                </div>
-
-                <div className="flex justify-between gap-4">
-
-                  <span className="text-gray-600">
-                    Phone:
-                  </span>
-
-                  <span className="font-medium text-gray-900 text-right">
-                    {passengerDetails?.phone ||
-                      'N/A'}
-                  </span>
-
-                </div>
-
-              </div>
-            </div>
-          )}
-
-          {/* ==================================================
-              SMARTSEAT
-          ================================================== */}
-
-          <div className="flex items-center justify-between p-4 bg-primary-50 rounded-lg border border-primary-200">
-
-            <div className="flex items-center gap-3">
-
-              <Shield className="w-5 h-5 text-primary-600" />
-
-              <div>
-
-                <p className="text-sm text-primary-700">
-                  SmartSeat Monitoring
-                </p>
-
-                <p className="text-xs text-primary-600">
-                  {smartSeatMonitoring
-                    ? 'Enabled'
-                    : 'Disabled'}
-                </p>
-
-              </div>
-
-            </div>
-
-            <Badge
-              variant={
-                smartSeatMonitoring
-                  ? 'success'
-                  : 'default'
-              }
-            >
-              {smartSeatMonitoring
-                ? 'ON'
-                : 'OFF'}
-            </Badge>
-
-          </div>
-
-          {/* ==================================================
-              FARE BREAKDOWN
-          ================================================== */}
-
-          <div className="rounded-lg border border-gray-200 overflow-hidden">
-
-            <div className="px-4 py-2 bg-gray-50 border-b border-gray-200">
-              <div className="flex items-center gap-2">
-                <IndianRupee className="w-4 h-4 text-gray-500" />
-                <p className="text-sm font-semibold text-gray-700">
-                  Fare Details
-                </p>
-              </div>
-            </div>
-
-            <div className="px-4 py-3 space-y-2">
-
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">
-                  Base Fare
-                </span>
-                <span className="font-medium text-gray-900">
-                  ₹{fare.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">
-                  GST ({gstRate}%)
-                </span>
-                <span className="font-medium text-gray-900">
-                  ₹{gstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
-              </div>
-
-            </div>
-
-            <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-primary-500 to-primary-600 text-white">
-              <div className="flex items-center gap-2">
-                <IndianRupee className="w-5 h-5" />
-                <span className="text-sm font-semibold">
-                  Total
-                </span>
-              </div>
-              <span className="text-xl font-bold">
-                ₹{totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          <div className="flex-1">
+            <div className="flex items-center justify-between">
+              <h4 className="font-bold text-white text-base">{operatorName}</h4>
+              <span className="text-xs font-mono text-cyan-400 bg-cyan-950/80 px-2 py-0.5 rounded border border-cyan-800">
+                {busNumber}
               </span>
             </div>
+            <p className="text-xs text-slate-400 mt-1">{busType}</p>
+          </div>
+        </div>
 
+        {/* ROUTE DISPLAY */}
+        <div className="p-4 bg-slate-900/60 rounded-xl border border-slate-800 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-emerald-400" />
+              <div>
+                <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Origin</p>
+                <p className="font-bold text-white text-sm">{from}</p>
+              </div>
+            </div>
+
+            <ArrowRight className="w-5 h-5 text-cyan-400 animate-pulse" />
+
+            <div className="flex items-center gap-2 text-right">
+              <div>
+                <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Destination</p>
+                <p className="font-bold text-white text-sm">{to}</p>
+              </div>
+              <MapPin className="w-4 h-4 text-rose-400" />
+            </div>
+          </div>
+        </div>
+
+        {/* DATE & DURATION */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800">
+            <div className="flex items-center gap-1.5 mb-1 text-slate-400">
+              <Calendar className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="text-[10px] uppercase tracking-wider font-semibold">Travel Date</span>
+            </div>
+            <p className="font-bold text-white text-xs">{formatDate(travelDate)}</p>
           </div>
 
+          <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800">
+            <div className="flex items-center gap-1.5 mb-1 text-slate-400">
+              <Clock className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="text-[10px] uppercase tracking-wider font-semibold">Est. Duration</span>
+            </div>
+            <p className="font-bold text-white text-xs">{duration}</p>
+          </div>
+        </div>
+
+        {/* DEPARTURE & ARRIVAL */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="p-3 bg-emerald-950/20 rounded-xl border border-emerald-500/30">
+            <p className="text-[10px] text-emerald-400 uppercase tracking-wider font-semibold mb-1">Departure</p>
+            <p className="font-extrabold text-white text-sm">{formatTime(schedule?.departureTime)}</p>
+          </div>
+
+          <div className="p-3 bg-cyan-950/20 rounded-xl border border-cyan-500/30">
+            <p className="text-[10px] text-cyan-400 uppercase tracking-wider font-semibold mb-1">Arrival</p>
+            <p className="font-extrabold text-white text-sm">{formatTime(schedule?.arrivalTime)}</p>
+          </div>
+        </div>
+
+        {/* SELECTED SEAT BADGE */}
+        <div className="p-4 bg-slate-900/90 rounded-xl border border-slate-800 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-cyan-500/20 border border-cyan-500/40 text-cyan-300">
+              <Armchair className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-[10px] text-slate-400 uppercase tracking-wider">Selected Seat</p>
+              <p className="text-lg font-black text-cyan-300">
+                {selectedSeat ? `#${selectedSeat}` : 'None Selected'}
+              </p>
+            </div>
+          </div>
+
+          <Badge variant={selectedSeat ? 'success' : 'default'} className={selectedSeat ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : 'bg-slate-800 text-slate-400'}>
+            {selectedSeat ? 'CONFIRMED' : 'PENDING'}
+          </Badge>
+        </div>
+
+        {/* PASSENGER DETAILS IF AVAILABLE */}
+        {passengerDetails && (
+          <div className="p-4 bg-slate-900/80 rounded-xl border border-slate-800 space-y-2">
+            <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
+              <User className="w-4 h-4 text-cyan-400" />
+              <h4 className="font-bold text-xs text-white uppercase tracking-wider">Passenger Information</h4>
+            </div>
+            <div className="space-y-1 text-xs">
+              <div className="flex justify-between">
+                <span className="text-slate-400">Name:</span>
+                <span className="font-semibold text-white">{passengerDetails?.name || passengerDetails?.fullName || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Email:</span>
+                <span className="font-semibold text-white">{passengerDetails?.email || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Phone:</span>
+                <span className="font-semibold text-white">{passengerDetails?.phone || 'N/A'}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* SMARTSEAT MONITORING INDICATOR */}
+        <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-cyan-400" />
+            <div>
+              <span className="font-semibold text-slate-200 block">SmartSeat AI Monitoring</span>
+              <span className="text-[10px] text-slate-400">Real-time adjacent seat notifications</span>
+            </div>
+          </div>
+          <Badge variant={smartSeatMonitoring ? 'success' : 'default'} className={smartSeatMonitoring ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-800 text-slate-400'}>
+            {smartSeatMonitoring ? 'ACTIVE' : 'OFF'}
+          </Badge>
+        </div>
+
+        {/* FARE BREAKDOWN */}
+        <div className="rounded-xl border border-slate-800 overflow-hidden bg-slate-900/90">
+          <div className="px-4 py-2.5 bg-slate-900 border-b border-slate-800 flex items-center gap-2">
+            <IndianRupee className="w-4 h-4 text-cyan-400" />
+            <p className="text-xs font-bold text-white uppercase tracking-wider">
+              FARE BREAKDOWN
+            </p>
+          </div>
+
+          <div className="p-4 space-y-2 text-xs">
+            <div className="flex justify-between text-slate-300">
+              <span>Base Seat Fare</span>
+              <span className="font-mono font-semibold">₹{fare.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+            <div className="flex justify-between text-slate-300">
+              <span>GST ({gstRate}%)</span>
+              <span className="font-mono font-semibold">₹{gstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between px-4 py-3.5 bg-gradient-to-r from-cyan-950 via-slate-900 to-cyan-950 border-t border-cyan-500/30 text-white">
+            <div className="flex items-center gap-1.5">
+              <IndianRupee className="w-5 h-5 text-cyan-400" />
+              <span className="text-xs font-bold uppercase tracking-wider">Total Payable</span>
+            </div>
+            <span className="text-xl font-black text-cyan-300 font-mono">
+              ₹{totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+          </div>
         </div>
 
       </CardBody>
@@ -568,4 +285,3 @@ const BookingSummary = ({
 };
 
 export default BookingSummary;
-

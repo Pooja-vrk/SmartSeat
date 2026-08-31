@@ -111,6 +111,24 @@ const bookingSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
+  // Refund tracking
+  refundAmount: {
+    type: Number,
+    default: null
+  },
+  refundPercentage: {
+    type: Number,
+    default: null
+  },
+  refundStatus: {
+    type: String,
+    enum: ['none', 'initiated', 'processing', 'completed'],
+    default: 'none'
+  },
+  refundInitiatedAt: {
+    type: Date,
+    default: null
+  },
   completedAt: {
     type: Date,
     default: null

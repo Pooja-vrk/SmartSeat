@@ -8,6 +8,7 @@ const smartSeatService = require('./smartSeatService');
 const recommendationService = require('./recommendationService');
 const { getAvailableSeats } = require('../utils/seatUtils');
 const { GST_RATE } = require('../config/gst');
+const { calculateRefund } = require('../config/cancellationPolicy');
 
 /**
  * Calculate GST breakdown for a given base fare.
@@ -86,9 +87,10 @@ class BookingService {
       // Calculate GST on the schedule fare
       const { baseFare, gstRate, gstAmount, totalAmount } = calculateGST(schedule.fare);
 
-      // Fetch route info for response
+      // Fetch route and user info for response
       const Route = require('../models/Route');
       const route = await Route.findById(schedule.routeId).session(session);
+      const user = await User.findById(userId).select('name email phone').session(session);
 
       // Create booking
       const booking = await Booking.create([{
@@ -142,6 +144,8 @@ class BookingService {
         success: true,
         data: {
           ...booking[0].toObject(),
+          userId: user ? user.toObject() : booking[0].userId,
+          passengerEmail: user ? user.email : (passengerDetails?.email || null),
           routeId: route ? route.toObject() : booking[0].routeId,
           route: route ? route.toObject() : null,
           schedule: schedule.toObject(),
@@ -253,8 +257,40 @@ class BookingService {
         throw new Error('Booking cannot be cancelled');
       }
 
-      // Cancel booking
-      await booking.cancel(reason);
+      // Populate schedule to get travelDate + departureTime for refund calc
+      const schedule = await Schedule.findById(booking.scheduleId).session(session);
+
+      // Calculate refund based on cancellation policy
+      let refundInfo = {
+        refundPercentage: 0,
+        refundAmount: 0,
+        cancellationFee: booking.fare,
+        label: 'No refund',
+        description: 'No refund applicable'
+      };
+
+      if (schedule) {
+        refundInfo = calculateRefund(
+          booking.fare,
+          schedule.travelDate,
+          schedule.departureTime
+        );
+      }
+
+      // Cancel booking and record refund info
+      booking.bookingStatus = 'cancelled';
+      booking.cancellationReason = reason;
+      booking.cancelledAt = new Date();
+      booking.refundAmount = refundInfo.refundAmount;
+      booking.refundPercentage = refundInfo.refundPercentage;
+
+      if (refundInfo.refundAmount > 0) {
+        booking.paymentStatus = 'refunded';
+        booking.refundStatus = 'initiated';
+        booking.refundInitiatedAt = new Date();
+      }
+
+      await booking.save({ session });
 
       // Release seat
       await Seat.findOneAndUpdate(
@@ -280,7 +316,8 @@ class BookingService {
 
       return {
         success: true,
-        data: booking
+        data: booking,
+        refund: refundInfo
       };
     } catch (error) {
       await session.abortTransaction();
@@ -288,6 +325,44 @@ class BookingService {
       throw error;
     } finally {
       session.endSession();
+    }
+  }
+
+  /**
+   * Get refund preview before cancelling a booking
+   * @param {String} bookingId
+   * @param {String} userId
+   */
+  async getRefundPreview(bookingId, userId) {
+    try {
+      const booking = await Booking.findOne({
+        $or: [{ _id: bookingId }, { bookingId }]
+      }).populate('scheduleId');
+
+      if (!booking) throw new Error('Booking not found');
+      if (booking.userId.toString() !== userId)
+        throw new Error('Access denied');
+      if (booking.bookingStatus !== 'confirmed' && booking.bookingStatus !== 'pending')
+        throw new Error('Only active bookings can be cancelled');
+
+      const schedule = booking.scheduleId;
+      const refundInfo = schedule
+        ? calculateRefund(booking.fare, schedule.travelDate, schedule.departureTime)
+        : { refundPercentage: 0, refundAmount: 0, cancellationFee: booking.fare };
+
+      return {
+        success: true,
+        data: {
+          bookingId: booking.bookingId || booking._id,
+          totalFare: booking.fare,
+          baseFare: booking.baseFare,
+          gstAmount: booking.gstAmount,
+          ...refundInfo
+        }
+      };
+    } catch (error) {
+      console.error('Error getting refund preview:', error);
+      throw error;
     }
   }
 
@@ -316,21 +391,30 @@ class BookingService {
         throw new Error('Booking not found');
       }
 
-      if (booking.userId.toString() !== userId) {
+      const bookingOwnerId = (booking.userId._id || booking.userId).toString();
+      if (bookingOwnerId !== userId.toString()) {
         throw new Error('You can only change your own bookings');
       }
 
-      if (booking.bookingStatus !== 'confirmed') {
-        throw new Error('Only confirmed bookings can be changed');
+      if (booking.bookingStatus !== 'confirmed' && booking.bookingStatus !== 'pending') {
+        throw new Error('Only active bookings can be changed');
       }
 
       const oldSeatNumber = booking.seatNumber;
+
+      // Prepare normalized target seat numbers (both padded and unpadded)
+      const targetSeatNumbers = [newSeatNumber];
+      const match = newSeatNumber.match(/^(\d+)([A-Z])$/i);
+      if (match) {
+        targetSeatNumbers.push(`${match[1].padStart(2, '0')}${match[2].toUpperCase()}`);
+        targetSeatNumbers.push(`${match[1]}${match[2].toUpperCase()}`);
+      }
 
       // Atomic reservation of new seat
       const newSeat = await Seat.findOneAndUpdate(
         {
           scheduleId: booking.scheduleId,
-          seatNumber: newSeatNumber,
+          seatNumber: { $in: targetSeatNumbers },
           status: 'available',
           $or: [
             { reservedUntil: null },
@@ -351,14 +435,30 @@ class BookingService {
         throw new Error('Seat is not available or already booked');
       }
 
+      // Prepare normalized old seat numbers
+      const oldSeatNumbers = [oldSeatNumber];
+      const oldMatch = oldSeatNumber.match(/^(\d+)([A-Z])$/i);
+      if (oldMatch) {
+        oldSeatNumbers.push(`${oldMatch[1].padStart(2, '0')}${oldMatch[2].toUpperCase()}`);
+        oldSeatNumbers.push(`${oldMatch[1]}${oldMatch[2].toUpperCase()}`);
+      }
+
       // Release old seat
       await Seat.findOneAndUpdate(
-        { bookingId: booking._id },
+        {
+          scheduleId: booking.scheduleId,
+          $or: [
+            { bookingId: booking._id },
+            { seatNumber: { $in: oldSeatNumbers } }
+          ]
+        },
         {
           $set: {
             status: 'available',
             bookedBy: null,
-            bookingId: null
+            bookingId: null,
+            reservedBy: null,
+            reservedUntil: null
           }
         },
         { session }

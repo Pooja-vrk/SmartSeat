@@ -1,5 +1,6 @@
-// About page
-import { Card, CardHeader, CardBody } from '../../components/common';
+// About page - SmartSeat Product & Mission Overview
+
+import { Card, CardBody } from '../../components/common';
 import { 
   Shield, 
   Users, 
@@ -8,8 +9,13 @@ import {
   Bus,
   Heart,
   Award,
-  Globe
+  Globe,
+  Sparkles,
+  Compass,
+  CheckCircle2
 } from 'lucide-react';
+
+import './About.css';
 
 const About = () => {
   const values = [
@@ -30,9 +36,8 @@ const About = () => {
     },
     {
       icon: Target,
-      title: 'Innovation First',
       title: 'Continuous Innovation',
-      description: ' constantly improving with cutting-edge technology'
+      description: 'Constantly improving with cutting-edge technology'
     }
   ];
 
@@ -44,251 +49,218 @@ const About = () => {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-12">
-      {/* Hero */}
-      <div className="text-center mb-16">
-        <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-          About SmartSeat
-        </h1>
-        <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-          Revolutionizing bus travel with intelligent seat selection and passenger-aware features
-        </p>
-      </div>
+    <div className="about-page-container min-h-screen py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto space-y-16">
+        
+        {/* ABOUT HERO CARD */}
+        <div className="about-hero-card text-center">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 text-xs font-bold uppercase tracking-wider mb-4">
+            <Sparkles className="w-4 h-4 text-cyan-400 animate-pulse" />
+            <span>✦ INTELLIGENT MOBILITY PLATFORM</span>
+          </div>
 
-      {/* Mission */}
-      <section className="mb-16">
-        <Card className="bg-gradient-to-br from-primary-50 to-secondary-50 border-primary-200">
-          <CardBody>
-            <div className="text-center max-w-3xl mx-auto">
-              <div className="flex items-center justify-center space-x-2 mb-4">
-                <Target className="w-8 h-8 text-primary-600" />
-                <h2 className="text-2xl font-bold text-gray-900">Our Mission</h2>
-              </div>
-              <p className="text-lg text-gray-700 leading-relaxed">
-                To transform bus travel into a comfortable, informed, and personalized experience 
-                by leveraging intelligent technology that respects passenger preferences while 
-                ensuring safety and privacy for all travelers.
-              </p>
-            </div>
-          </CardBody>
-        </Card>
-      </section>
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-white uppercase tracking-tight mb-4">
+            ABOUT <span className="text-cyan-400">SMARTSEAT</span>
+          </h1>
 
-      {/* What is SmartSeat */}
-      <section className="mb-16">
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">What is SmartSeat?</h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            SmartSeat is a modern bus-booking platform with a unique Dynamic Passenger-Aware Seating system
+          <p className="text-base sm:text-lg text-slate-300 max-w-3xl mx-auto leading-relaxed">
+            Revolutionizing bus travel with intelligent 3D seat selection and passenger-aware telemetry features.
           </p>
         </div>
 
-        <Card>
-          <CardBody>
-            <div className="prose prose-lg max-w-none text-gray-700">
-              <p className="mb-4">
-                Unlike traditional bus booking systems, SmartSeat goes beyond simple seat selection. 
-                Our innovative platform continuously monitors your booking and provides real-time updates 
-                about your travel environment.
-              </p>
-              <p className="mb-4">
-                When you book a seat, SmartSeat keeps you informed about changes to your adjacent seats, 
-                offers personalized recommendations based on your preferences, and gives you complete 
-                control to make changes that enhance your travel experience.
-              </p>
-              <p>
-                Built on the principles of privacy, inclusivity, and passenger choice, SmartSeat 
-                ensures that every traveler can make informed decisions about their journey without 
-                compromising their personal information or comfort.
+        {/* MISSION SECTION */}
+        <section className="mission-card-premium p-8 text-center max-w-4xl mx-auto">
+          <div className="flex items-center justify-center space-x-2 mb-4">
+            <div className="p-3 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-600">
+              <Target className="w-8 h-8" />
+            </div>
+            <h2 className="text-2xl font-black text-slate-900 uppercase tracking-wider">Our Mission</h2>
+          </div>
+          <p className="text-base sm:text-lg text-slate-700 leading-relaxed font-medium">
+            To transform bus travel into a comfortable, informed, and personalized experience 
+            by leveraging intelligent technology that respects passenger preferences while 
+            ensuring safety and privacy for all travelers.
+          </p>
+        </section>
+
+        {/* WHAT IS SMARTSEAT */}
+        <section className="space-y-6">
+          <div className="text-center space-y-2">
+            <span className="text-xs font-black tracking-widest text-cyan-600 uppercase">INNOVATION</span>
+            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tight">What is SmartSeat?</h2>
+            <p className="text-sm text-slate-600 max-w-2xl mx-auto">
+              SmartSeat is a modern bus-booking platform with a unique Dynamic Passenger-Aware Seating system.
+            </p>
+          </div>
+
+          <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm leading-relaxed text-slate-700 text-sm space-y-4">
+            <p>
+              Unlike traditional bus booking systems, SmartSeat goes beyond simple seat selection. 
+              Our innovative platform continuously monitors your booking and provides real-time updates 
+              about your travel environment.
+            </p>
+            <p>
+              When you book a seat, SmartSeat keeps you informed about changes to your adjacent seats, 
+              offers personalized recommendations based on your preferences, and gives you complete 
+              control to make changes that enhance your travel experience.
+            </p>
+            <p>
+              Built on the principles of privacy, inclusivity, and passenger choice, SmartSeat 
+              ensures that every traveler can make informed decisions about their journey without 
+              compromising their personal information or comfort.
+            </p>
+          </div>
+        </section>
+
+        {/* CORE FEATURES GRID */}
+        <section className="space-y-8">
+          <div className="text-center">
+            <span className="text-xs font-black tracking-widest text-cyan-600 uppercase">CAPABILITIES</span>
+            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tight mt-1">Core Features</h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="feature-card-premium">
+              <div className="flex items-center space-x-3 mb-3">
+                <div className="p-2.5 rounded-xl bg-cyan-500/10 text-cyan-600 border border-cyan-500/30">
+                  <Bus className="w-6 h-6" />
+                </div>
+                <h3 className="text-lg font-black text-slate-900 uppercase tracking-wide">Smart Selection</h3>
+              </div>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Interactive 3D seat maps with real-time availability and intelligent recommendations.
               </p>
             </div>
-          </CardBody>
-        </Card>
-      </section>
 
-      {/* Core Features */}
-      <section className="mb-16">
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">Core Features</h2>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Card hover>
-            <CardBody>
-              <div className="flex items-center space-x-3 mb-4">
-                <Bus className="w-8 h-8 text-primary-600" />
-                <h3 className="text-xl font-semibold text-gray-900">Smart Selection</h3>
+            <div className="feature-card-premium">
+              <div className="flex items-center space-x-3 mb-3">
+                <div className="p-2.5 rounded-xl bg-teal-500/10 text-teal-600 border border-teal-500/30">
+                  <Shield className="w-6 h-6" />
+                </div>
+                <h3 className="text-lg font-black text-slate-900 uppercase tracking-wide">Real-time Awareness</h3>
               </div>
-              <p className="text-gray-600">
-                Interactive seat maps with real-time availability and intelligent recommendations
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Get notified when your adjacent seat status changes with privacy-protected information.
               </p>
-            </CardBody>
-          </Card>
+            </div>
 
-          <Card hover>
-            <CardBody>
-              <div className="flex items-center space-x-3 mb-4">
-                <Shield className="w-8 h-8 text-primary-600" />
-                <h3 className="text-xl font-semibold text-gray-900">Real-time Awareness</h3>
+            <div className="feature-card-premium">
+              <div className="flex items-center space-x-3 mb-3">
+                <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 border border-emerald-500/30">
+                  <Star className="w-6 h-6" />
+                </div>
+                <h3 className="text-lg font-black text-slate-900 uppercase tracking-wide">Personalized Matches</h3>
               </div>
-              <p className="text-gray-600">
-                Get notified when your adjacent seat status changes with privacy-protected information
+              <p className="text-xs text-slate-600 leading-relaxed">
+                AI-powered seat recommendations based on your travel preferences and comfort needs.
               </p>
-            </CardBody>
-          </Card>
+            </div>
 
-          <Card hover>
-            <CardBody>
-              <div className="flex items-center space-x-3 mb-4">
-                <Star className="w-8 h-8 text-primary-600" />
-                <h3 className="text-xl font-semibold text-gray-900">Personalized Matches</h3>
+            <div className="feature-card-premium">
+              <div className="flex items-center space-x-3 mb-3">
+                <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-600 border border-amber-500/30">
+                  <Users className="w-6 h-6" />
+                </div>
+                <h3 className="text-lg font-black text-slate-900 uppercase tracking-wide">Easy Changes</h3>
               </div>
-              <p className="text-gray-600">
-                AI-powered seat recommendations based on your travel preferences and comfort needs
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Switch to better seats with one-click confirmation and availability verification.
               </p>
-            </CardBody>
-          </Card>
+            </div>
 
-          <Card hover>
-            <CardBody>
-              <div className="flex items-center space-x-3 mb-4">
-                <Users className="w-8 h-8 text-primary-600" />
-                <h3 className="text-xl font-semibold text-gray-900">Easy Changes</h3>
+            <div className="feature-card-premium">
+              <div className="flex items-center space-x-3 mb-3">
+                <div className="p-2.5 rounded-xl bg-rose-500/10 text-rose-600 border border-rose-500/30">
+                  <Heart className="w-6 h-6" />
+                </div>
+                <h3 className="text-lg font-black text-slate-900 uppercase tracking-wide">Privacy First</h3>
               </div>
-              <p className="text-gray-600">
-                Switch to better seats with one-click confirmation and availability verification
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Your personal information is protected with granular privacy controls and secure design.
               </p>
-            </CardBody>
-          </Card>
+            </div>
 
-          <Card hover>
-            <CardBody>
-              <div className="flex items-center space-x-3 mb-4">
-                <Heart className="w-8 h-8 text-primary-600" />
-                <h3 className="text-xl font-semibold text-gray-900">Privacy First</h3>
+            <div className="feature-card-premium">
+              <div className="flex items-center space-x-3 mb-3">
+                <div className="p-2.5 rounded-xl bg-sky-500/10 text-sky-600 border border-sky-500/30">
+                  <Globe className="w-6 h-6" />
+                </div>
+                <h3 className="text-lg font-black text-slate-900 uppercase tracking-wide">Inclusive Design</h3>
               </div>
-              <p className="text-gray-600">
-                Your personal information is protected with granular privacy controls and secure design
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Features designed for all passengers with preference-driven, non-category options.
               </p>
-            </CardBody>
-          </Card>
+            </div>
+          </div>
+        </section>
 
-          <Card hover>
-            <CardBody>
-              <div className="flex items-center space-x-3 mb-4">
-                <Globe className="w-8 h-8 text-primary-600" />
-                <h3 className="text-xl font-semibold text-gray-900">Inclusive Design</h3>
-              </div>
-              <p className="text-gray-600">
-                Features designed for all passengers with preference-driven, not category-based, options
-              </p>
-            </CardBody>
-          </Card>
-        </div>
-      </section>
+        {/* VALUES SECTION */}
+        <section className="space-y-8">
+          <div className="text-center">
+            <span className="text-xs font-black tracking-widest text-cyan-600 uppercase">FOUNDATION</span>
+            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tight mt-1">Our Values</h2>
+          </div>
 
-      {/* Values */}
-      <section className="mb-16">
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">Our Values</h2>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {values.map((value, index) => {
-            const Icon = value.icon;
-            return (
-              <Card key={index} className="border-l-4 border-l-primary-500">
-                <CardBody>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {values.map((value, index) => {
+              const Icon = value.icon;
+              return (
+                <div key={index} className="value-card-premium">
                   <div className="flex items-start space-x-4">
-                    <div className="flex-shrink-0">
-                      <div className="w-12 h-12 rounded-lg bg-primary-100 flex items-center justify-center">
-                        <Icon className="w-6 h-6 text-primary-600" />
-                      </div>
+                    <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-600 border border-emerald-500/30 flex-shrink-0">
+                      <Icon className="w-6 h-6" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                      <h3 className="text-base font-black text-slate-900 uppercase tracking-wide mb-1">
                         {value.title}
                       </h3>
-                      <p className="text-gray-600">
+                      <p className="text-xs text-slate-600 leading-relaxed">
                         {value.description}
                       </p>
                     </div>
                   </div>
-                </CardBody>
-              </Card>
-            );
-          })}
-        </div>
-      </section>
+                </div>
+              );
+            })}
+          </div>
+        </section>
 
-      {/* Timeline */}
-      <section className="mb-16">
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">Our Journey</h2>
-        </div>
+        {/* TIMELINE JOURNEY */}
+        <section className="space-y-8 max-w-4xl mx-auto">
+          <div className="text-center">
+            <span className="text-xs font-black tracking-widest text-cyan-600 uppercase">MILESTONES</span>
+            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tight mt-1">Our Journey</h2>
+          </div>
 
-        <Card>
-          <CardBody>
-            <div className="relative">
-              <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-primary-200"></div>
-              <div className="space-y-8">
-                {milestones.map((milestone, index) => (
-                  <div key={index} className="relative pl-12">
-                    <div className="absolute left-2 w-5 h-5 rounded-full bg-primary-600 border-4 border-white"></div>
-                    <div className="flex items-start space-x-4">
-                      <span className="text-2xl font-bold text-primary-600">{milestone.year}</span>
-                      <p className="text-lg text-gray-700">{milestone.event}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+          <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm relative">
+            <div className="absolute left-6 top-8 bottom-8 timeline-path-line" />
+            <div className="space-y-8 pl-10 relative">
+              {milestones.map((milestone, index) => (
+                <div key={index} className="flex items-start space-x-4 relative">
+                  <div className="absolute -left-10 top-1 w-4 h-4 rounded-full timeline-node-bullet" />
+                  <span className="text-2xl font-black text-cyan-600 font-mono">{milestone.year}</span>
+                  <p className="text-sm font-semibold text-slate-800 mt-1">{milestone.event}</p>
+                </div>
+              ))}
             </div>
-          </CardBody>
-        </Card>
-      </section>
+          </div>
+        </section>
 
-      {/* Team */}
-      <section className="mb-16">
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">Our Team</h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            A passionate team of travel enthusiasts and technology experts
+        {/* CONTACT CTA */}
+        <section className="bg-gradient-to-r from-slate-900 via-cyan-950 to-slate-900 text-white rounded-3xl p-10 text-center shadow-xl">
+          <h2 className="text-3xl font-black uppercase tracking-tight mb-2">Want to Learn More?</h2>
+          <p className="text-sm text-slate-300 max-w-lg mx-auto mb-6">
+            We'd love to hear from you and answer any questions about SmartSeat.
           </p>
-        </div>
+          <a 
+            href="/contact" 
+            className="inline-block bg-cyan-500 text-slate-950 px-8 py-3.5 rounded-xl font-black text-xs uppercase tracking-wider hover:bg-cyan-400 transition-all shadow-lg shadow-cyan-500/20"
+          >
+            Contact Us →
+          </a>
+        </section>
 
-        <Card>
-          <CardBody>
-            <div className="text-center text-gray-700">
-              <p className="mb-4">
-                SmartSeat is built by a diverse team committed to making travel better for everyone. 
-                Our combined expertise in transportation, technology, and user experience drives us 
-                to create solutions that truly matter to passengers.
-              </p>
-              <p>
-                We believe that travel should be comfortable, informed, and stress-free. That's why 
-                we've dedicated ourselves to building a platform that puts passengers first.
-              </p>
-            </div>
-          </CardBody>
-        </Card>
-      </section>
-
-      {/* Contact CTA */}
-      <section>
-        <Card className="bg-gradient-to-r from-primary-600 to-secondary-600 text-white">
-          <CardBody>
-            <div className="text-center">
-              <h2 className="text-2xl font-bold mb-4">Want to Learn More?</h2>
-              <p className="text-lg text-primary-100 mb-6">
-                We'd love to hear from you and answer any questions about SmartSeat
-              </p>
-              <a href="/contact" className="inline-block bg-white text-primary-600 px-6 py-3 rounded-lg font-semibold hover:bg-primary-50 transition-colors">
-                Contact Us
-              </a>
-            </div>
-          </CardBody>
-        </Card>
-      </section>
+      </div>
     </div>
   );
 };

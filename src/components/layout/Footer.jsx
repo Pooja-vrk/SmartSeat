@@ -1,104 +1,280 @@
-// Footer component
+// Footer component — SmartSeat Premium Multi-Column Footer
+// Created & Designed by V.Pooja
+
 import { Link } from 'react-router-dom';
-import { Mail, Phone, MapPin, Share2 } from 'lucide-react';
+import {
+  Bus,
+  ArrowRight,
+  Sparkles,
+  Compass,
+  ShieldCheck,
+  Armchair,
+  BookOpen,
+  Bell,
+  HelpCircle,
+  FileText,
+  Lock,
+  XCircle,
+  Phone,
+  Share2,
+  Zap
+} from 'lucide-react';
+import Logo from './Logo';
+import './NavbarFooter.css';
 
 const Footer = () => {
+  const currentYear = new Date().getFullYear();
+
   return (
-    <footer className="bg-gray-900 text-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          {/* Company Info */}
+    <footer className="ss-footer" aria-label="Site footer">
+
+      <div className="ss-footer__inner">
+
+        {/* ══════════════════════════════════════════════════════
+            BRAND HERO CARD
+        ══════════════════════════════════════════════════════ */}
+        <div className="ss-footer__brand-card">
+          <div className="ss-footer__brand-card-inner">
+
+            <div>
+              <Logo size="lg" />
+
+              <h2 className="ss-footer__brand-headline">
+                Your Journey.{' '}
+                <span className="fc-cyan">Your Seat.</span>{' '}
+                <span className="fc-teal">Your SmartWay.</span>
+              </h2>
+
+              <p className="ss-footer__brand-sub">
+                Travel smarter, choose better, and make every journey yours
+                with intelligent 3D seat selection and real-time journey management.
+              </p>
+            </div>
+
+            <Link to="/search" className="ss-footer__brand-cta" aria-label="Find your bus">
+              <span>FIND YOUR BUS</span>
+              <ArrowRight className="w-4 h-4" aria-hidden="true" />
+            </Link>
+
+          </div>
+
+          {/* decorative route strip */}
+          <div className="ss-footer__route-strip" aria-hidden="true">
+            <div className="ss-footer__route-node">
+              <span className="ss-footer__route-dot" style={{ background: '#22d3ee' }} />
+              <span>BANGALORE</span>
+            </div>
+            <div className="ss-footer__route-line" />
+            <div className="ss-footer__route-node">
+              <span className="ss-footer__route-dot" style={{ background: '#2dd4bf' }} />
+              <span>CHENNAI</span>
+            </div>
+            <div className="ss-footer__route-line" />
+            <div className="ss-footer__route-node">
+              <span className="ss-footer__route-dot" style={{ background: '#34d399' }} />
+              <span>KOCHI</span>
+            </div>
+            <div className="ss-footer__route-line" />
+            <div className="ss-footer__route-node">
+              <span className="ss-footer__route-dot" style={{ background: '#a78bfa' }} />
+              <span>HYDERABAD</span>
+            </div>
+          </div>
+        </div>
+
+
+        {/* ══════════════════════════════════════════════════════
+            FOUR-COLUMN NAVIGATION GRID
+        ══════════════════════════════════════════════════════ */}
+        <div className="ss-footer__columns">
+
+          {/* ── Column 1: SMARTSEAT ── */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">SmartSeat</h3>
-            <p className="text-gray-400 text-sm mb-4">
-              Travel smarter. Choose better. Stay informed with our intelligent seat booking system.
+            <h3 className="ss-footer__col-heading">
+              <Compass className="w-4 h-4" aria-hidden="true" />
+              SMARTSEAT
+            </h3>
+            <p className="ss-footer__col-text">
+              Smart mobility for smarter journeys. Experience the future of bus
+              travel with 3D seat awareness, real-time alerts, and effortless
+              booking management.
             </p>
-            <div className="flex space-x-4">
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                <Share2 className="w-5 h-5" />
+            <div className="ss-footer__socials" aria-label="Social links">
+              <a
+                href="#"
+                className="ss-footer__social-btn"
+                aria-label="Share SmartSeat"
+                onClick={(e) => e.preventDefault()}
+              >
+                <Share2 className="w-4 h-4" aria-hidden="true" />
               </a>
+              <Link to="/search" className="ss-footer__social-btn" aria-label="Search buses">
+                <Compass className="w-4 h-4" aria-hidden="true" />
+              </Link>
+              <Link to="/notifications" className="ss-footer__social-btn" aria-label="Notifications">
+                <Bell className="w-4 h-4" aria-hidden="true" />
+              </Link>
             </div>
           </div>
 
-          {/* Quick Links */}
+
+          {/* ── Column 2: EXPLORE ── */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
-            <ul className="space-y-2">
+            <h3 className="ss-footer__col-heading">
+              EXPLORE
+            </h3>
+            <ul className="flex flex-col gap-1.5" role="list">
               <li>
-                <Link to="/about" className="text-gray-400 hover:text-white text-sm transition-colors">
-                  About Us
+                <Link to="/" className="ss-footer-link">
+                  <Bus className="w-3.5 h-3.5 flex-shrink-0 opacity-50" aria-hidden="true" />
+                  Home
                 </Link>
               </li>
               <li>
-                <Link to="/contact" className="text-gray-400 hover:text-white text-sm transition-colors">
-                  Contact
-                </Link>
-              </li>
-              <li>
-                <Link to="/help" className="text-gray-400 hover:text-white text-sm transition-colors">
-                  Help & FAQ
-                </Link>
-              </li>
-              <li>
-                <Link to="/search" className="text-gray-400 hover:text-white text-sm transition-colors">
+                <Link to="/search" className="ss-footer-link">
+                  <Compass className="w-3.5 h-3.5 flex-shrink-0 opacity-50" aria-hidden="true" />
                   Search Buses
                 </Link>
               </li>
+              <li>
+                <Link to="/my-bookings" className="ss-footer-link">
+                  <BookOpen className="w-3.5 h-3.5 flex-shrink-0 opacity-50" aria-hidden="true" />
+                  My Bookings
+                </Link>
+              </li>
+              <li>
+                <Link to="/notifications" className="ss-footer-link">
+                  <Bell className="w-3.5 h-3.5 flex-shrink-0 opacity-50" aria-hidden="true" />
+                  Notifications
+                </Link>
+              </li>
+              <li>
+                <Link to="/about" className="ss-footer-link">
+                  <Sparkles className="w-3.5 h-3.5 flex-shrink-0 opacity-50" aria-hidden="true" />
+                  About SmartSeat
+                </Link>
+              </li>
             </ul>
           </div>
 
-          {/* Legal */}
+
+          {/* ── Column 3: SUPPORT ── */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">Legal</h3>
-            <ul className="space-y-2">
+            <h3 className="ss-footer__col-heading">
+              SUPPORT
+            </h3>
+            <ul className="flex flex-col gap-1.5" role="list">
               <li>
-                <a href="#" className="text-gray-400 hover:text-white text-sm transition-colors">
+                <Link to="/contact" className="ss-footer-link">
+                  <Phone className="w-3.5 h-3.5 flex-shrink-0 opacity-50" aria-hidden="true" />
+                  Contact Support
+                </Link>
+              </li>
+              <li>
+                <Link to="/help" className="ss-footer-link">
+                  <HelpCircle className="w-3.5 h-3.5 flex-shrink-0 opacity-50" aria-hidden="true" />
+                  Help &amp; FAQ
+                </Link>
+              </li>
+              <li>
+                <Link to="/terms" className="ss-footer-link">
+                  <FileText className="w-3.5 h-3.5 flex-shrink-0 opacity-50" aria-hidden="true" />
                   Terms of Service
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="text-gray-400 hover:text-white text-sm transition-colors">
+                <Link to="/privacy" className="ss-footer-link">
+                  <Lock className="w-3.5 h-3.5 flex-shrink-0 opacity-50" aria-hidden="true" />
                   Privacy Policy
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="text-gray-400 hover:text-white text-sm transition-colors">
-                  Refund Policy
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-gray-400 hover:text-white text-sm transition-colors">
+                <Link to="/cancellation" className="ss-footer-link">
+                  <XCircle className="w-3.5 h-3.5 flex-shrink-0 opacity-50" aria-hidden="true" />
                   Cancellation Policy
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
 
-          {/* Contact */}
+
+          {/* ── Column 4: CREATOR — V.Pooja ── */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">Contact Us</h3>
-            <ul className="space-y-3">
-              <li className="flex items-start space-x-3">
-                <Mail className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
-                <span className="text-gray-400 text-sm">support@smartseat.com</span>
-              </li>
-              <li className="flex items-start space-x-3">
-                <Phone className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
-                <span className="text-gray-400 text-sm">+91 1800-123-4567</span>
-              </li>
-              <li className="flex items-start space-x-3">
-                <MapPin className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
-                <span className="text-gray-400 text-sm">Mumbai, Maharashtra, India</span>
-              </li>
-            </ul>
+            <h3 className="ss-footer__col-heading">
+              CREATOR
+            </h3>
+
+            <div className="ss-footer__creator-card">
+              <div className="ss-footer__creator-badge">
+                <Zap className="w-3 h-3" aria-hidden="true" />
+                <span>DESIGNED BY</span>
+              </div>
+
+              <div className="ss-footer__creator-name" aria-label="Created by V.Pooja">
+                <span>V.Pooja</span>
+              </div>
+
+              <p className="ss-footer__creator-desc">
+                Created &amp; Designed for a Smart Mobility Experience.
+                Built with curiosity, crafted for better journeys.
+              </p>
+
+              <div className="ss-footer__creator-tag">
+                Smart Mobility Experience
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+
+        {/* ══════════════════════════════════════════════════════
+            TRUST STRIP
+        ══════════════════════════════════════════════════════ */}
+        <div className="ss-footer__trust" aria-label="Platform features">
+          <div className="ss-footer__trust-item">
+            <Sparkles className="w-4 h-4 text-cyan-400" aria-hidden="true" />
+            SMART BOOKING
+          </div>
+          <div className="ss-footer__trust-item">
+            <Armchair className="w-4 h-4 text-teal-400" aria-hidden="true" />
+            REAL-TIME SEATS
+          </div>
+          <div className="ss-footer__trust-item">
+            <ShieldCheck className="w-4 h-4 text-emerald-400" aria-hidden="true" />
+            SECURE JOURNEYS
+          </div>
+          <div className="ss-footer__trust-item">
+            <Bell className="w-4 h-4 text-amber-400" aria-hidden="true" />
+            LIVE ALERTS
+          </div>
+          <div className="ss-footer__trust-item">
+            <Compass className="w-4 h-4 text-sky-400" aria-hidden="true" />
+            EASY MANAGEMENT
           </div>
         </div>
 
-        <div className="border-t border-gray-800 mt-8 pt-8 text-center">
-          <p className="text-gray-400 text-sm">
-            © 2024 SmartSeat. All rights reserved.
+
+        {/* ══════════════════════════════════════════════════════
+            BOTTOM BAR
+        ══════════════════════════════════════════════════════ */}
+        <div className="ss-footer__bottom">
+          <p className="ss-footer__bottom-copyright">
+            &copy; {currentYear} SmartSeat. All rights reserved.
+          </p>
+
+          <div className="ss-footer__bottom-credit">
+            <span>Created &amp; Designed by</span>
+            <strong>V.Pooja</strong>
+            <span className="ss-footer__bottom-tag" aria-hidden="true">✦</span>
+          </div>
+
+          <p className="ss-footer__bottom-tag">
+            SMART MOBILITY &bull; BETTER JOURNEYS
           </p>
         </div>
+
       </div>
     </footer>
   );

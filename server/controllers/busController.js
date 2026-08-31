@@ -371,6 +371,9 @@ exports.getBusSeats = asyncHandler(async (req, res) => {
 
       position: seat.position,
 
+      // berth: 'lower' | 'upper' | null  — only set for sleeper buses
+      berth: seat.berth || null,
+
       adjacentSeat:
         Array.isArray(seat.adjacentSeatNumbers) &&
         seat.adjacentSeatNumbers.length > 0
@@ -392,6 +395,9 @@ exports.getBusSeats = asyncHandler(async (req, res) => {
       busId: id,
 
       scheduleId,
+
+      // busType enables the frontend to render the correct layout style
+      busType: bus.busType,
 
       totalSeats: formattedSeats.length,
 

@@ -86,18 +86,20 @@ const ChangeSeat = () => {
   };
 
   const confirmChangeSeat = async () => {
+    if (changing) return;
     setChanging(true);
     setError(null);
     try {
-      const response = await bookingService.changeSeat(booking._id, selectedSeat);
+      const targetBookingId = booking._id || booking.bookingId;
+      const response = await bookingService.changeSeat(targetBookingId, selectedSeat);
       if (response.success) {
-        // Navigate back to My Bookings
+        alert(`Seat changed successfully! Your new seat is ${selectedSeat}.`);
         navigate('/my-bookings');
       } else {
         setError(response.message || 'Failed to change seat');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to change seat');
+      setError(err?.message || err?.response?.data?.message || 'Failed to change seat');
       console.error('Error changing seat:', err);
     } finally {
       setChanging(false);

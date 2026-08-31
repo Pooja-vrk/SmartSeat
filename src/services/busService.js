@@ -90,7 +90,8 @@ export const busService = {
         success: true,
         data: Array.isArray(response?.data)
           ? response.data
-          : []
+          : [],
+        meta: response?.meta || null
       };
     } catch (error) {
       console.error(

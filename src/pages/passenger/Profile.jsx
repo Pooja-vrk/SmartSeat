@@ -1,4 +1,5 @@
-// Profile and preferences page
+// Profile and preferences page - SmartSeat Passenger Control Panel
+
 import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardBody, Button, Input, Select, Switch } from '../../components/common';
 import { useAuth } from '../../context/AuthContext';
@@ -13,8 +14,11 @@ import {
   Save,
   MapPin,
   Armchair,
-  Lock
+  Lock,
+  Sparkles
 } from 'lucide-react';
+
+import './PassengerPages.css';
 
 const Profile = () => {
   const { user, updateProfile } = useAuth();
@@ -65,58 +69,63 @@ const Profile = () => {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Profile & Preferences</h1>
-        <p className="text-gray-600">Manage your account and SmartSeat settings</p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        {/* Sidebar */}
-        <div className="lg:col-span-1">
-          <Card>
-            <CardBody>
-              <div className="space-y-2">
-                {tabs.map(tab => {
-                  const Icon = tab.icon;
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-all ${
-                        activeTab === tab.id
-                          ? 'bg-primary-50 text-primary-700'
-                          : 'text-gray-700 hover:bg-gray-100'
-                      }`}
-                    >
-                      <Icon className="w-5 h-5" />
-                      <span className="font-medium">{tab.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </CardBody>
-          </Card>
+    <div className="passenger-page-container min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto space-y-6">
+        
+        {/* HERO HEADER */}
+        <div className="p-6 sm:p-8 rounded-3xl bg-slate-900/95 text-white border border-slate-800 shadow-xl flex flex-wrap items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 text-xs font-mono font-bold uppercase tracking-wider">
+              <Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+              <span>PASSENGER ACCOUNT CONTROL</span>
+            </div>
+            <h1 className="text-3xl font-black tracking-tight text-white uppercase">
+              PROFILE & <span className="text-cyan-400">PREFERENCES</span>
+            </h1>
+            <p className="text-xs text-slate-400">Manage account information, SmartSeat preferences, and privacy controls</p>
+          </div>
         </div>
 
-        {/* Main Content */}
-        <div className="lg:col-span-3">
-          {success && (
-            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center space-x-2">
-              <Save className="w-5 h-5 text-green-600" />
-              <p className="text-sm text-green-800">Changes saved successfully!</p>
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          
+          {/* SIDEBAR TABS */}
+          <div className="lg:col-span-1">
+            <div className="bg-white p-3 rounded-3xl border border-slate-200 shadow-sm space-y-2">
+              {tabs.map(tab => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`profile-tab-btn ${activeTab === tab.id ? 'profile-tab-active' : ''}`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
             </div>
-          )}
+          </div>
 
-          {activeTab === 'personal' && (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center space-x-2">
-                  <User className="w-5 h-5 text-primary-600" />
-                  <h3 className="text-lg font-semibold text-gray-900">Personal Information</h3>
+          {/* MAIN CONTENT AREA */}
+          <div className="lg:col-span-3 space-y-4">
+            
+            {/* SUCCESS BANNER */}
+            {success && (
+              <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center space-x-2 text-emerald-800 text-xs font-bold uppercase tracking-wider shadow-sm animate-fade-in">
+                <Save className="w-4 h-4 text-emerald-600" />
+                <span>Changes saved successfully!</span>
+              </div>
+            )}
+
+            {/* PERSONAL INFO TAB */}
+            {activeTab === 'personal' && (
+              <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+                <div className="flex items-center space-x-2 border-b border-slate-100 pb-3">
+                  <User className="w-5 h-5 text-cyan-600" />
+                  <h3 className="text-base font-black text-slate-900 uppercase tracking-wider">Personal Information</h3>
                 </div>
-              </CardHeader>
-              <CardBody>
+
                 <div className="space-y-4">
                   <Input
                     label="Full Name"
@@ -144,28 +153,27 @@ const Profile = () => {
                     onClick={handleProfileSave}
                     loading={loading}
                     icon={Save}
+                    className="bg-gradient-to-r from-cyan-500 to-teal-500 text-slate-950 font-bold text-xs uppercase tracking-wider px-6 py-3 rounded-xl shadow-md"
                   >
                     Save Changes
                   </Button>
                 </div>
-              </CardBody>
-            </Card>
-          )}
+              </div>
+            )}
 
-          {activeTab === 'smartseat' && (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center space-x-2">
-                  <Shield className="w-5 h-5 text-primary-600" />
-                  <h3 className="text-lg font-semibold text-gray-900">SmartSeat Preferences</h3>
+            {/* SMARTSEAT PREFERENCES TAB */}
+            {activeTab === 'smartseat' && (
+              <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+                <div className="flex items-center space-x-2 border-b border-slate-100 pb-3">
+                  <Shield className="w-5 h-5 text-cyan-600" />
+                  <h3 className="text-base font-black text-slate-900 uppercase tracking-wider">SmartSeat Telemetry Preferences</h3>
                 </div>
-              </CardHeader>
-              <CardBody>
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+
+                <div className="space-y-4 text-xs">
+                  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
                     <div>
-                      <p className="font-medium text-gray-900">Adjacent Seat Monitoring</p>
-                      <p className="text-sm text-gray-600">Get notified when adjacent seat changes</p>
+                      <p className="font-bold text-slate-900">Adjacent Seat Monitoring</p>
+                      <p className="text-slate-500">Get notified when adjacent seat status changes</p>
                     </div>
                     <Switch
                       checked={preferencesData.adjacentSeatMonitoring}
@@ -173,10 +181,10 @@ const Profile = () => {
                     />
                   </div>
 
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
                     <div>
-                      <p className="font-medium text-gray-900">Notify on Adjacent Change</p>
-                      <p className="text-sm text-gray-600">Receive alerts when adjacent seat is booked</p>
+                      <p className="font-bold text-slate-900">Notify on Adjacent Change</p>
+                      <p className="text-slate-500">Receive alerts when adjacent seat is booked</p>
                     </div>
                     <Switch
                       checked={preferencesData.notifyOnAdjacentChange}
@@ -184,10 +192,10 @@ const Profile = () => {
                     />
                   </div>
 
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
                     <div>
-                      <p className="font-medium text-gray-900">Allow Recommendations</p>
-                      <p className="text-sm text-gray-600">Receive smart seat suggestions</p>
+                      <p className="font-bold text-slate-900">Allow Recommendations</p>
+                      <p className="text-slate-500">Receive smart seat suggestions</p>
                     </div>
                     <Switch
                       checked={preferencesData.allowRecommendations}
@@ -196,7 +204,7 @@ const Profile = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
                       Preferred Section
                     </label>
                     <Select
@@ -210,10 +218,10 @@ const Profile = () => {
                     />
                   </div>
 
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
                     <div>
-                      <p className="font-medium text-gray-900">Window Seat Preference</p>
-                      <p className="text-sm text-gray-600">Prefer window seats when available</p>
+                      <p className="font-bold text-slate-900">Window Seat Preference</p>
+                      <p className="text-slate-500">Prefer window seats when available</p>
                     </div>
                     <Switch
                       checked={preferencesData.windowPreference}
@@ -222,7 +230,7 @@ const Profile = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
                       Preferred Adjacent Condition
                     </label>
                     <Select
@@ -236,10 +244,10 @@ const Profile = () => {
                     />
                   </div>
 
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
                     <div>
-                      <p className="font-medium text-gray-900">Accessibility Priority</p>
-                      <p className="text-sm text-gray-600">Prioritize accessible seats</p>
+                      <p className="font-bold text-slate-900">Accessibility Priority</p>
+                      <p className="text-slate-500">Prioritize accessible seats</p>
                     </div>
                     <Switch
                       checked={preferencesData.accessibilityPriority}
@@ -251,28 +259,27 @@ const Profile = () => {
                     variant="primary"
                     onClick={handlePreferencesSave}
                     icon={Save}
+                    className="bg-gradient-to-r from-cyan-500 to-teal-500 text-slate-950 font-bold text-xs uppercase tracking-wider px-6 py-3 rounded-xl shadow-md"
                   >
                     Save Preferences
                   </Button>
                 </div>
-              </CardBody>
-            </Card>
-          )}
+              </div>
+            )}
 
-          {activeTab === 'notifications' && (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center space-x-2">
-                  <Bell className="w-5 h-5 text-primary-600" />
-                  <h3 className="text-lg font-semibold text-gray-900">Notification Preferences</h3>
+            {/* NOTIFICATIONS TAB */}
+            {activeTab === 'notifications' && (
+              <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+                <div className="flex items-center space-x-2 border-b border-slate-100 pb-3">
+                  <Bell className="w-5 h-5 text-cyan-600" />
+                  <h3 className="text-base font-black text-slate-900 uppercase tracking-wider">Notification Settings</h3>
                 </div>
-              </CardHeader>
-              <CardBody>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+
+                <div className="space-y-4 text-xs">
+                  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
                     <div>
-                      <p className="font-medium text-gray-900">Booking Notifications</p>
-                      <p className="text-sm text-gray-600">Updates about your bookings</p>
+                      <p className="font-bold text-slate-900">Booking Notifications</p>
+                      <p className="text-slate-500">Updates about your bookings</p>
                     </div>
                     <Switch
                       checked={true}
@@ -280,10 +287,10 @@ const Profile = () => {
                     />
                   </div>
 
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
                     <div>
-                      <p className="font-medium text-gray-900">SmartSeat Alerts</p>
-                      <p className="text-sm text-gray-600">Adjacent seat changes and recommendations</p>
+                      <p className="font-bold text-slate-900">SmartSeat Alerts</p>
+                      <p className="text-slate-500">Adjacent seat changes and recommendations</p>
                     </div>
                     <Switch
                       checked={preferencesData.notifyOnAdjacentChange}
@@ -291,10 +298,10 @@ const Profile = () => {
                     />
                   </div>
 
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
                     <div>
-                      <p className="font-medium text-gray-900">Payment Notifications</p>
-                      <p className="text-sm text-gray-600">Payment confirmations and receipts</p>
+                      <p className="font-bold text-slate-900">Payment Notifications</p>
+                      <p className="text-slate-500">Payment confirmations and receipts</p>
                     </div>
                     <Switch
                       checked={true}
@@ -302,11 +309,11 @@ const Profile = () => {
                     />
                   </div>
 
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
                     <div>
-                      <p className="font-medium text-gray-900">Promotional Notifications</p>
-                      <p className="text-sm text-gray-600">Offers and updates</p>
-                </div>
+                      <p className="font-bold text-slate-900">Promotional Notifications</p>
+                      <p className="text-slate-500">Offers and updates</p>
+                    </div>
                     <Switch
                       checked={false}
                       onChange={() => {}}
@@ -317,28 +324,27 @@ const Profile = () => {
                     variant="primary"
                     onClick={handlePreferencesSave}
                     icon={Save}
+                    className="bg-gradient-to-r from-cyan-500 to-teal-500 text-slate-950 font-bold text-xs uppercase tracking-wider px-6 py-3 rounded-xl shadow-md"
                   >
                     Save Preferences
                   </Button>
                 </div>
-              </CardBody>
-            </Card>
-          )}
+              </div>
+            )}
 
-          {activeTab === 'privacy' && (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center space-x-2">
-                  <Lock className="w-5 h-5 text-primary-600" />
-                  <h3 className="text-lg font-semibold text-gray-900">Privacy Settings</h3>
+            {/* PRIVACY TAB */}
+            {activeTab === 'privacy' && (
+              <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+                <div className="flex items-center space-x-2 border-b border-slate-100 pb-3">
+                  <Lock className="w-5 h-5 text-cyan-600" />
+                  <h3 className="text-base font-black text-slate-900 uppercase tracking-wider">Privacy Controls</h3>
                 </div>
-              </CardHeader>
-              <CardBody>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+
+                <div className="space-y-4 text-xs">
+                  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
                     <div>
-                      <p className="font-medium text-gray-900">Show Passenger Category</p>
-                      <p className="text-sm text-gray-600">Allow others to see your passenger category</p>
+                      <p className="font-bold text-slate-900">Show Passenger Category</p>
+                      <p className="text-slate-500">Allow others to see your passenger category</p>
                     </div>
                     <Switch
                       checked={preferencesData.showPassengerCategory}
@@ -346,9 +352,9 @@ const Profile = () => {
                     />
                   </div>
 
-                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <h4 className="font-medium text-blue-900 mb-2">Privacy Notice</h4>
-                    <p className="text-sm text-blue-800">
+                  <div className="p-4 bg-cyan-50/80 rounded-2xl border border-cyan-200">
+                    <h4 className="font-bold text-cyan-950 mb-1">Privacy Notice</h4>
+                    <p className="text-cyan-800 leading-relaxed">
                       Your personal information is protected by our privacy policy. Passenger category information is only shared when you enable this setting and is used solely for seat preference matching.
                     </p>
                   </div>
@@ -357,13 +363,15 @@ const Profile = () => {
                     variant="primary"
                     onClick={handlePreferencesSave}
                     icon={Save}
+                    className="bg-gradient-to-r from-cyan-500 to-teal-500 text-slate-950 font-bold text-xs uppercase tracking-wider px-6 py-3 rounded-xl shadow-md"
                   >
                     Save Privacy Settings
                   </Button>
                 </div>
-              </CardBody>
-            </Card>
-          )}
+              </div>
+            )}
+
+          </div>
         </div>
       </div>
     </div>

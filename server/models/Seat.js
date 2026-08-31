@@ -35,6 +35,12 @@ const seatSchema = new mongoose.Schema({
     enum: ['left', 'right'],
     required: true
   },
+  // For sleeper buses: 'lower' | 'upper' | null
+  berth: {
+    type: String,
+    enum: ['lower', 'upper', null],
+    default: null
+  },
   status: {
     type: String,
     enum: ['available', 'booked', 'reserved', 'blocked'],

@@ -73,6 +73,16 @@ export const bookingService = {
     }
   },
 
+  // Get refund preview before cancellation
+  getRefundPreview: async (bookingId) => {
+    try {
+      const response = await api.get(`/bookings/${bookingId}/refund-preview`);
+      return response;
+    } catch (error) {
+      throw error.response?.data || { success: false, message: 'Failed to get refund preview' };
+    }
+  },
+
   // Change seat
   changeSeat: async (bookingId, newSeatNumber) => {
     try {

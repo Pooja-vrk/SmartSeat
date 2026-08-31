@@ -10,6 +10,11 @@ import About from '../pages/public/About';
 import Contact from '../pages/public/Contact';
 import Help from '../pages/public/Help';
 
+// Support & Legal pages
+import Terms from '../pages/public/Terms';
+import Privacy from '../pages/public/Privacy';
+import Cancellation from '../pages/public/Cancellation';
+
 // Auth pages
 import Login from '../pages/auth/Login';
 import Register from '../pages/auth/Register';
@@ -22,6 +27,8 @@ import MyBookings from '../pages/passenger/MyBookings';
 import Notifications from '../pages/passenger/Notifications';
 import Profile from '../pages/passenger/Profile';
 import BookingFlow from '../pages/passenger/BookingFlow';
+import TicketPage from '../pages/passenger/Ticket';
+import ChangeSeat from '../pages/passenger/ChangeSeat';
 
 // Admin pages
 import AdminDashboard from '../pages/admin/AdminDashboard';
@@ -45,7 +52,13 @@ const ProtectedRoute = ({ children, requireAdmin = false }) => {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+    return (
+      <Navigate
+        to="/login"
+        state={{ from: location.pathname }}
+        replace
+      />
+    );
   }
 
   if (requireAdmin && !isAdmin()) {
@@ -80,6 +93,20 @@ export const publicRoutes = [
   {
     path: '/help',
     element: <Help />
+  },
+
+  // Support & Legal
+  {
+    path: '/terms',
+    element: <Terms />
+  },
+  {
+    path: '/privacy',
+    element: <Privacy />
+  },
+  {
+    path: '/cancellation',
+    element: <Cancellation />
   }
 ];
 
@@ -176,10 +203,18 @@ export const passengerRoutes = [
     )
   },
   {
+    path: '/change-seat/:id',
+    element: (
+      <ProtectedRoute>
+        <ChangeSeat />
+      </ProtectedRoute>
+    )
+  },
+  {
     path: '/ticket/:id',
     element: (
       <ProtectedRoute>
-        <BookingFlow />
+        <TicketPage />
       </ProtectedRoute>
     )
   }

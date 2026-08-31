@@ -10,13 +10,15 @@ const {
   getAvailableSeats,
   updateSmartSeatMonitoring,
   getSeatRecommendations,
-  getRecommendationDetails
+  getRecommendationDetails,
+  getRefundPreview
 } = require('../controllers/bookingController');
 const { authenticate, requirePassenger } = require('../middleware/auth');
 
 router.post('/', authenticate, requirePassenger, createBooking);
 router.get('/', authenticate, requirePassenger, getMyBookings);
 router.get('/:id', authenticate, getBooking);
+router.get('/:id/refund-preview', authenticate, requirePassenger, getRefundPreview);
 router.patch('/:id/cancel', authenticate, requirePassenger, cancelBooking);
 router.post('/:id/change-seat', authenticate, requirePassenger, changeSeat);
 router.post('/check-availability', authenticate, checkAvailability);

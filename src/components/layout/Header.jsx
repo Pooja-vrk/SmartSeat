@@ -1,43 +1,49 @@
-// Header component with navigation
+// Header component - SmartSeat Premium Mobility Navbar
+
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Bell, User, LogOut, Settings } from 'lucide-react';
+import {
+  Menu, X, Bell, LogOut, Settings,
+  ChevronDown, Bus, Sparkles, MapPin,
+  BookOpen, LayoutDashboard, UserCircle2
+} from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
-import { Button } from '../common';
-import Logo from './Logo';
+import './NavbarFooter.css';
 
 const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notificationDropdown, setNotificationDropdown] = useState(false);
   const [userDropdown, setUserDropdown] = useState(false);
+
   const location = useLocation();
   const { user, isAuthenticated, logout, isAdmin, isPassenger } = useAuth();
   const { unreadCount } = useNotification();
 
   const navLinks = [
-    { name: 'Home', path: '/' },
+    { name: 'Home',         path: '/' },
     { name: 'Search Buses', path: '/search' },
-    { name: 'About', path: '/about' },
-    { name: 'Contact', path: '/contact' },
+    { name: 'About',        path: '/about' },
+    { name: 'Contact',      path: '/contact' },
   ];
 
   const passengerLinks = [
-    { name: 'Dashboard', path: '/dashboard' },
-    { name: 'My Bookings', path: '/my-bookings' },
-    { name: 'Notifications', path: '/notifications' },
-    { name: 'Profile', path: '/profile' },
+    { name: 'Dashboard',     path: '/dashboard',    icon: LayoutDashboard },
+    { name: 'My Bookings',   path: '/my-bookings',  icon: BookOpen },
+    { name: 'Notifications', path: '/notifications', icon: Bell },
+    { name: 'Profile',       path: '/profile',       icon: UserCircle2 },
   ];
 
   const adminLinks = [
     { name: 'Admin Dashboard', path: '/admin' },
-    { name: 'Buses', path: '/admin/buses' },
-    { name: 'Bookings', path: '/admin/bookings' },
-    { name: 'Passengers', path: '/admin/passengers' },
+    { name: 'Buses',           path: '/admin/buses' },
+    { name: 'Bookings',        path: '/admin/bookings' },
+    { name: 'Passengers',      path: '/admin/passengers' },
   ];
 
   const isActiveLink = (path) => {
-    return location.pathname === path || location.pathname.startsWith(path + '/');
+    return location.pathname === path ||
+      (path !== '/' && location.pathname.startsWith(path + '/'));
   };
 
   const handleLogout = async () => {
@@ -46,255 +52,332 @@ const Header = () => {
   };
 
   return (
-    <header className="bg-white shadow-sm sticky top-0 z-40">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          {/* Logo */}
-          <Link to="/" className="flex items-center">
-            <Logo />
-          </Link>
+    <header className="ss-navbar">
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-1">
-            {navLinks.map((link) => (
+      {/* ── animated top-bar gradient ── */}
+      <div className="ss-navbar__topline" aria-hidden="true" />
+
+      <div className="ss-navbar__inner">
+
+        {/* ══════════════════════════════════════════
+            BRAND LOGO + TAGLINE
+        ══════════════════════════════════════════ */}
+        <Link to="/" className="ss-navbar__brand" aria-label="SmartSeat — Home">
+          {/* icon */}
+          <div className="ss-navbar__brand-icon">
+            <Bus className="w-5 h-5" />
+            <Sparkles className="w-3 h-3 ss-navbar__brand-spark" aria-hidden="true" />
+          </div>
+          {/* wordmark */}
+          <div className="ss-navbar__brand-text">
+            <span className="ss-navbar__brand-name">
+              SMART<span className="ss-navbar__brand-accent">SEAT</span>
+            </span>
+            <span className="ss-navbar__brand-tagline">Smart Mobility</span>
+          </div>
+        </Link>
+
+        {/* ══════════════════════════════════════════
+            DESKTOP NAV LINKS
+        ══════════════════════════════════════════ */}
+        <nav className="ss-navbar__nav" aria-label="Main navigation">
+          {navLinks.map((link) => (
+            <Link
+              key={link.path}
+              to={link.path}
+              className={`ss-nav-link ${isActiveLink(link.path) ? 'ss-nav-link--active' : ''}`}
+            >
+              {link.name}
+            </Link>
+          ))}
+
+          {isPassenger() && passengerLinks.map((link) => (
+            <Link
+              key={link.path}
+              to={link.path}
+              className={`ss-nav-link ${isActiveLink(link.path) ? 'ss-nav-link--active' : ''}`}
+            >
+              {link.name}
+            </Link>
+          ))}
+
+          {isAdmin() && adminLinks.map((link) => (
+            <Link
+              key={link.path}
+              to={link.path}
+              className={`ss-nav-link ${isActiveLink(link.path) ? 'ss-nav-link--active' : ''}`}
+            >
+              {link.name}
+            </Link>
+          ))}
+        </nav>
+
+        {/* ══════════════════════════════════════════
+            RIGHT ACTIONS — authenticated
+        ══════════════════════════════════════════ */}
+        <div className="ss-navbar__actions">
+          {isAuthenticated ? (
+            <>
+              {/* ── notification bell ── */}
+              <div className="ss-navbar__bell-wrap">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNotificationDropdown(!notificationDropdown);
+                    setUserDropdown(false);
+                  }}
+                  className="ss-navbar__bell-btn"
+                  aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
+                  aria-expanded={notificationDropdown}
+                >
+                  <Bell className="w-5 h-5" />
+                  {unreadCount > 0 && (
+                    <>
+                      <span className="ss-navbar__bell-ping" aria-hidden="true" />
+                      <span className="ss-navbar__bell-badge" aria-live="polite">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    </>
+                  )}
+                </button>
+
+                {notificationDropdown && (
+                  <div className="ss-dropdown" role="menu" aria-label="Notifications panel">
+                    <div className="ss-dropdown__header">
+                      <span className="ss-dropdown__header-title">NOTIFICATIONS</span>
+                      <span className="ss-dropdown__header-badge">{unreadCount} UNREAD</span>
+                    </div>
+                    <div className="ss-dropdown__body">
+                      {unreadCount > 0 ? (
+                        <Link
+                          to="/notifications"
+                          className="ss-dropdown__link"
+                          onClick={() => setNotificationDropdown(false)}
+                        >
+                          View {unreadCount} notification{unreadCount > 1 ? 's' : ''} →
+                        </Link>
+                      ) : (
+                        <span className="ss-dropdown__empty">No new notifications</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* ── user profile pill ── */}
+              <div className="ss-navbar__user-wrap">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUserDropdown(!userDropdown);
+                    setNotificationDropdown(false);
+                  }}
+                  className="ss-navbar__user-pill"
+                  aria-expanded={userDropdown}
+                  aria-label="User account menu"
+                >
+                  {/* avatar */}
+                  <div className="ss-navbar__avatar">
+                    {user?.name ? user.name[0].toUpperCase() : 'U'}
+                  </div>
+                  {/* identity */}
+                  <div className="ss-navbar__user-identity">
+                    <span className="ss-navbar__user-name">{user?.name}</span>
+                    <span className="ss-navbar__user-role">
+                      {isAdmin() ? 'ADMIN' : 'PASSENGER'}
+                    </span>
+                  </div>
+                  <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                </button>
+
+                {userDropdown && (
+                  <div className="ss-dropdown ss-dropdown--user" role="menu">
+                    <div className="ss-dropdown__header">
+                      <span className="ss-dropdown__header-label">LOGGED IN AS</span>
+                      <span className="ss-dropdown__header-email">
+                        {user?.email || user?.name}
+                      </span>
+                    </div>
+                    <Link
+                      to="/profile"
+                      className="ss-dropdown__item"
+                      onClick={() => setUserDropdown(false)}
+                      role="menuitem"
+                    >
+                      <Settings className="w-4 h-4 text-cyan-400" />
+                      <span>Profile Settings</span>
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="ss-dropdown__item ss-dropdown__item--danger"
+                      role="menuitem"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span>Logout</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* ── V.Pooja creator pill (desktop) ── */}
+              <div className="ss-navbar__creator-pill" aria-label="Created by V.Pooja">
+                <span className="ss-navbar__creator-dot" aria-hidden="true" />
+                <div className="ss-navbar__creator-text">
+                  <span className="ss-navbar__creator-name">V.Pooja</span>
+                  <span className="ss-navbar__creator-sub">Smart Travel</span>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <Link to="/login" className="ss-btn ss-btn--ghost">
+                Login
+              </Link>
+              <Link to="/register" className="ss-btn ss-btn--primary">
+                ✦ Register
+              </Link>
+
+              {/* ── V.Pooja creator pill (desktop, unauthenticated) ── */}
+              <div className="ss-navbar__creator-pill" aria-label="Created by V.Pooja">
+                <span className="ss-navbar__creator-dot" aria-hidden="true" />
+                <div className="ss-navbar__creator-text">
+                  <span className="ss-navbar__creator-name">V.Pooja</span>
+                  <span className="ss-navbar__creator-sub">Smart Travel</span>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* ══════════════════════════════════════════
+            MOBILE HAMBURGER
+        ══════════════════════════════════════════ */}
+        <button
+          type="button"
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="ss-navbar__hamburger"
+          aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+          aria-expanded={mobileMenuOpen}
+        >
+          {mobileMenuOpen
+            ? <X className="w-6 h-6" />
+            : <Menu className="w-6 h-6" />
+          }
+        </button>
+      </div>
+
+      {/* ══════════════════════════════════════════
+          MOBILE DRAWER
+      ══════════════════════════════════════════ */}
+      {mobileMenuOpen && (
+        <div className="ss-mobile-drawer" role="navigation" aria-label="Mobile navigation">
+
+          {/* brand row in drawer */}
+          <div className="ss-mobile-drawer__brand">
+            <span className="text-xs font-black text-slate-400 uppercase tracking-widest">
+              SMARTSEAT
+            </span>
+            <span className="text-[10px] text-cyan-400 font-mono font-bold uppercase tracking-widest">
+              by V.Pooja
+            </span>
+          </div>
+
+          {navLinks.map((link) => (
+            <Link
+              key={link.path}
+              to={link.path}
+              onClick={() => setMobileMenuOpen(false)}
+              className={`ss-mobile-link ${isActiveLink(link.path) ? 'ss-mobile-link--active' : ''}`}
+            >
+              {link.name}
+            </Link>
+          ))}
+
+          {isPassenger() && passengerLinks.map((link) => {
+            const Icon = link.icon;
+            return (
               <Link
                 key={link.path}
                 to={link.path}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  isActiveLink(link.path)
-                    ? 'bg-primary-50 text-primary-700'
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
+                onClick={() => setMobileMenuOpen(false)}
+                className={`ss-mobile-link ${isActiveLink(link.path) ? 'ss-mobile-link--active' : ''}`}
               >
-                {link.name}
+                {Icon && <Icon className="w-4 h-4 flex-shrink-0" />}
+                <span>{link.name}</span>
+                {link.path === '/notifications' && unreadCount > 0 && (
+                  <span className="ss-mobile-link__badge">{unreadCount}</span>
+                )}
               </Link>
-            ))}
+            );
+          })}
 
-            {isPassenger() && (
-              <>
-                {passengerLinks.map((link) => (
-                  <Link
-                    key={link.path}
-                    to={link.path}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      isActiveLink(link.path)
-                        ? 'bg-primary-50 text-primary-700'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    {link.name}
-                  </Link>
-                ))}
-              </>
-            )}
+          {isAdmin() && adminLinks.map((link) => (
+            <Link
+              key={link.path}
+              to={link.path}
+              onClick={() => setMobileMenuOpen(false)}
+              className={`ss-mobile-link ${isActiveLink(link.path) ? 'ss-mobile-link--active' : ''}`}
+            >
+              {link.name}
+            </Link>
+          ))}
 
-            {isAdmin() && (
-              <>
-                {adminLinks.map((link) => (
-                  <Link
-                    key={link.path}
-                    to={link.path}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      isActiveLink(link.path)
-                        ? 'bg-primary-50 text-primary-700'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    {link.name}
-                  </Link>
-                ))}
-              </>
-            )}
-          </nav>
-
-          {/* Right side actions */}
-          <div className="hidden md:flex items-center space-x-4">
-            {isAuthenticated ? (
-              <>
-                {/* Notifications */}
-                <div className="relative">
-                  <button
-                    onClick={() => setNotificationDropdown(!notificationDropdown)}
-                    className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors relative"
-                  >
-                    <Bell className="w-5 h-5" />
-                    {unreadCount > 0 && (
-                      <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-                    )}
-                  </button>
-
-                  {notificationDropdown && (
-                    <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 py-2">
-                      <div className="px-4 py-2 border-b border-gray-200">
-                        <h3 className="font-semibold text-gray-900">Notifications</h3>
-                      </div>
-                      <div className="px-4 py-2 text-sm text-gray-500">
-                        {unreadCount > 0 ? (
-                          <Link to="/notifications" className="text-primary-600 hover:underline">
-                            View {unreadCount} unread notification{unreadCount > 1 ? 's' : ''}
-                          </Link>
-                        ) : (
-                          <span>No new notifications</span>
-                        )}
-                      </div>
-                    </div>
-                  )}
+          {/* auth actions */}
+          {isAuthenticated ? (
+            <div className="ss-mobile-drawer__auth">
+              <div className="ss-mobile-drawer__user">
+                <div className="ss-navbar__avatar">{user?.name ? user.name[0].toUpperCase() : 'U'}</div>
+                <div>
+                  <p className="text-xs font-bold text-white">{user?.name}</p>
+                  <p className="text-[10px] font-mono text-slate-400 uppercase">
+                    {isAdmin() ? 'ADMIN' : 'PASSENGER'}
+                  </p>
                 </div>
-
-                {/* User menu */}
-                <div className="relative">
-                  <button
-                    onClick={() => setUserDropdown(!userDropdown)}
-                    className="flex items-center space-x-2 p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-                  >
-                    <User className="w-5 h-5" />
-                    <span className="text-sm font-medium">{user?.name}</span>
-                  </button>
-
-                  {userDropdown && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2">
-                      <Link
-                        to="/profile"
-                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        onClick={() => setUserDropdown(false)}
-                      >
-                        <Settings className="w-4 h-4 mr-2" />
-                        Profile Settings
-                      </Link>
-                      <button
-                        onClick={handleLogout}
-                        className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      >
-                        <LogOut className="w-4 h-4 mr-2" />
-                        Logout
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </>
-            ) : (
-              <div className="flex items-center space-x-2">
-                <Link to="/login">
-                  <Button variant="ghost" size="sm">
-                    Login
-                  </Button>
-                </Link>
-                <Link to="/register">
-                  <Button variant="primary" size="sm">
-                    Register
-                  </Button>
-                </Link>
               </div>
-            )}
+              <Link
+                to="/profile"
+                onClick={() => setMobileMenuOpen(false)}
+                className="ss-mobile-link"
+              >
+                <Settings className="w-4 h-4" /> Profile Settings
+              </Link>
+              <button
+                type="button"
+                onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
+                className="ss-mobile-link ss-mobile-link--danger"
+              >
+                <LogOut className="w-4 h-4" /> Logout
+              </button>
+            </div>
+          ) : (
+            <div className="ss-mobile-drawer__auth">
+              <Link
+                to="/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="ss-btn ss-btn--ghost w-full text-center"
+              >
+                Login
+              </Link>
+              <Link
+                to="/register"
+                onClick={() => setMobileMenuOpen(false)}
+                className="ss-btn ss-btn--primary w-full text-center"
+              >
+                ✦ Register
+              </Link>
+            </div>
+          )}
+
+          {/* creator identity in mobile */}
+          <div className="ss-mobile-drawer__creator">
+            <MapPin className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
+            <span className="text-[11px] text-slate-400">Created by</span>
+            <span className="text-[11px] font-black text-cyan-300">V.Pooja</span>
           </div>
 
-          {/* Mobile menu button */}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
-          >
-            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
         </div>
-
-        {/* Mobile menu */}
-        {mobileMenuOpen && (
-          <div className="md:hidden py-4 border-t border-gray-200">
-            <nav className="flex flex-col space-y-1">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.path}
-                  to={link.path}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    isActiveLink(link.path)
-                      ? 'bg-primary-50 text-primary-700'
-                      : 'text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  {link.name}
-                </Link>
-              ))}
-
-              {isPassenger() && (
-                <>
-                  {passengerLinks.map((link) => (
-                    <Link
-                      key={link.path}
-                      to={link.path}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        isActiveLink(link.path)
-                          ? 'bg-primary-50 text-primary-700'
-                          : 'text-gray-700 hover:bg-gray-100'
-                      }`}
-                    >
-                      {link.name}
-                    </Link>
-                  ))}
-                </>
-              )}
-
-              {isAdmin() && (
-                <>
-                  {adminLinks.map((link) => (
-                    <Link
-                      key={link.path}
-                      to={link.path}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        isActiveLink(link.path)
-                          ? 'bg-primary-50 text-primary-700'
-                          : 'text-gray-700 hover:bg-gray-100'
-                      }`}
-                    >
-                      {link.name}
-                    </Link>
-                  ))}
-                </>
-              )}
-
-              {isAuthenticated ? (
-                <>
-                  <Link
-                    to="/notifications"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100"
-                  >
-                    Notifications {unreadCount > 0 && `(${unreadCount})`}
-                  </Link>
-                  <Link
-                    to="/profile"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100"
-                  >
-                    Profile
-                  </Link>
-                  <button
-                    onClick={handleLogout}
-                    className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 text-left"
-                  >
-                    Logout
-                  </button>
-                </>
-              ) : (
-                <div className="flex flex-col space-y-2 px-4 pt-4">
-                  <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
-                    <Button variant="outline" className="w-full">
-                      Login
-                    </Button>
-                  </Link>
-                  <Link to="/register" onClick={() => setMobileMenuOpen(false)}>
-                    <Button variant="primary" className="w-full">
-                      Register
-                    </Button>
-                  </Link>
-                </div>
-              )}
-            </nav>
-          </div>
-        )}
-      </div>
+      )}
     </header>
   );
 };

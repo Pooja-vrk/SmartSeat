@@ -25,7 +25,7 @@
  * GST_RATE is a percentage (5 = 5 %).
  */
 
-export const GST_RATE = 5;
+export const GST_RATE = 18;
 
 /**
  * Calculate GST breakdown for a base fare — DISPLAY PREVIEW ONLY.

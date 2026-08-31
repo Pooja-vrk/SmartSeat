@@ -63,6 +63,16 @@ exports.getBooking = asyncHandler(async (req, res, next) => {
 });
 
 /**
+ * @desc    Get refund preview before cancellation
+ * @route   GET /api/bookings/:id/refund-preview
+ * @access  Private
+ */
+exports.getRefundPreview = asyncHandler(async (req, res, next) => {
+  const result = await bookingService.getRefundPreview(req.params.id, req.user.id);
+  res.status(200).json(result);
+});
+
+/**
  * @desc    Cancel booking
  * @route   PATCH /api/bookings/:id/cancel
  * @access  Private
@@ -79,7 +89,8 @@ exports.cancelBooking = asyncHandler(async (req, res, next) => {
   res.status(200).json({
     success: true,
     message: 'Booking cancelled successfully',
-    data: result.data
+    data: result.data,
+    refund: result.refund
   });
 });
 

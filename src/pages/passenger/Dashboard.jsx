@@ -1,4 +1,5 @@
-// Passenger dashboard
+// Passenger dashboard - SmartSeat Mobility Control Panel
+
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardHeader, CardBody, Button, Badge, Loading } from '../../components/common';
@@ -16,8 +17,12 @@ import {
   Shield,
   Search,
   User,
-  LogOut
+  Sparkles,
+  ArrowRight,
+  ChevronRight
 } from 'lucide-react';
+
+import './PassengerPages.css';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
@@ -84,270 +89,274 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <Loading size="lg" text="Loading dashboard..." />
+      <div className="passenger-page-container min-h-screen py-8 px-4 flex items-center justify-center">
+        <Loading size="lg" text="Loading dashboard telemetry..." />
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      {/* Welcome Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          Welcome back, {user?.name}!
-        </h1>
-        <p className="text-gray-600">Here's what's happening with your travel</p>
-      </div>
+    <div className="passenger-page-container min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto space-y-8">
+        
+        {/* WELCOME HEADER */}
+        <div className="p-6 sm:p-8 rounded-3xl bg-slate-900/95 text-white border border-slate-800 shadow-xl flex flex-wrap items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 text-xs font-mono font-bold uppercase tracking-wider">
+              <Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+              <span>SMARTSEAT PASSENGER CONTROL</span>
+            </div>
+            <h1 className="text-3xl font-black tracking-tight text-white">
+              Welcome back, <span className="text-cyan-400">{user?.name}!</span>
+            </h1>
+            <p className="text-xs text-slate-400">Here's what's happening with your travel telemetry</p>
+          </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card>
-          <CardBody>
+          <div className="flex items-center gap-3">
+            <Link to="/search">
+              <Button variant="primary" className="bg-gradient-to-r from-cyan-500 to-teal-500 text-slate-950 font-black px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider shadow-lg shadow-cyan-500/20">
+                ✦ Book New Trip
+              </Button>
+            </Link>
+          </div>
+        </div>
+
+        {/* STATS CARDS GRID */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="stats-card-3d">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Total Bookings</p>
-                <p className="text-3xl font-bold text-gray-900">{stats.totalBookings}</p>
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Total Bookings</p>
+                <p className="text-3xl font-black text-slate-900">{stats.totalBookings}</p>
               </div>
-              <div className="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center">
-                <Bus className="w-6 h-6 text-primary-600" />
+              <div className="w-12 h-12 rounded-2xl stats-icon-cyan flex items-center justify-center">
+                <Bus className="w-6 h-6" />
               </div>
             </div>
-          </CardBody>
-        </Card>
+          </div>
 
-        <Card>
-          <CardBody>
+          <div className="stats-card-3d">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Upcoming Trips</p>
-                <p className="text-3xl font-bold text-gray-900">{stats.upcomingTrips}</p>
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Upcoming Trips</p>
+                <p className="text-3xl font-black text-slate-900">{stats.upcomingTrips}</p>
               </div>
-              <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
-                <Calendar className="w-6 h-6 text-green-600" />
+              <div className="w-12 h-12 rounded-2xl stats-icon-green flex items-center justify-center">
+                <Calendar className="w-6 h-6" />
               </div>
             </div>
-          </CardBody>
-        </Card>
+          </div>
 
-        <Card>
-          <CardBody>
+          <div className="stats-card-3d">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">SmartSeat Active</p>
-                <p className="text-3xl font-bold text-gray-900">{stats.smartSeatEnabled}</p>
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">SmartSeat Active</p>
+                <p className="text-3xl font-black text-slate-900">{stats.smartSeatEnabled}</p>
               </div>
-              <div className="w-12 h-12 rounded-full bg-secondary-100 flex items-center justify-center">
-                <Shield className="w-6 h-6 text-secondary-600" />
+              <div className="w-12 h-12 rounded-2xl stats-icon-teal flex items-center justify-center">
+                <Shield className="w-6 h-6" />
               </div>
             </div>
-          </CardBody>
-        </Card>
-      </div>
+          </div>
+        </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Content */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Upcoming Trip */}
-          {upcomingTrip ? (
-            <Card className="border-primary-200 shadow-md">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900">Upcoming Trip</h3>
-                  <Badge variant="success">Confirmed</Badge>
+        {/* MAIN DASHBOARD CONTENT GRID */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          
+          {/* MAIN CONTENT AREA */}
+          <div className="lg:col-span-2 space-y-6">
+            
+            {/* UPCOMING TRIP CARD */}
+            {upcomingTrip ? (
+              <div className="upcoming-trip-card p-6">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">UPCOMING TRIP</h3>
+                  </div>
+                  <Badge variant="success" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] uppercase font-bold">
+                    Confirmed
+                  </Badge>
                 </div>
-              </CardHeader>
-              <CardBody>
+
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <p className="text-sm text-gray-600 mb-1">{upcomingTrip.busId?.operatorName || 'Bus Operator'}</p>
-                    <p className="text-lg font-bold text-gray-900">{upcomingTrip.routeId?.source || 'N/A'} → {upcomingTrip.routeId?.destination || 'N/A'}</p>
+                    <p className="text-xs font-mono font-bold text-cyan-600 mb-0.5">{upcomingTrip.busId?.operatorName || 'Bus Operator'}</p>
+                    <p className="text-xl font-black text-slate-900">
+                      {upcomingTrip.routeId?.source || 'N/A'} <span className="text-cyan-500 font-normal">→</span> {upcomingTrip.routeId?.destination || 'N/A'}
+                    </p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm text-gray-600 mb-1">Seat</p>
-                    <p className="text-lg font-bold text-primary-600">{upcomingTrip.seatNumber || 'N/A'}</p>
+                  <div className="text-right bg-cyan-50 px-3 py-1.5 rounded-xl border border-cyan-200">
+                    <p className="text-[10px] text-cyan-700 font-bold uppercase">SEAT</p>
+                    <p className="text-lg font-black text-cyan-800">{upcomingTrip.seatNumber || 'N/A'}</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div className="p-3 bg-green-50 rounded-lg">
+                  <div className="p-3 bg-emerald-50/80 rounded-xl border border-emerald-200">
                     <div className="flex items-center space-x-2 mb-1">
-                      <Calendar className="w-4 h-4 text-green-600" />
-                      <p className="text-xs text-green-700">Departure</p>
+                      <Calendar className="w-4 h-4 text-emerald-600" />
+                      <p className="text-[10px] font-bold text-emerald-700 uppercase">Departure</p>
                     </div>
                     {upcomingTrip.scheduleId?.departure ? (
                       <>
-                        <p className="font-semibold text-green-900">{formatDateTime(upcomingTrip.scheduleId.departure).date}</p>
-                        <p className="text-sm text-green-800">{formatDateTime(upcomingTrip.scheduleId.departure).time}</p>
+                        <p className="font-bold text-xs text-emerald-950">{formatDateTime(upcomingTrip.scheduleId.departure).date}</p>
+                        <p className="text-xs text-emerald-800">{formatDateTime(upcomingTrip.scheduleId.departure).time}</p>
                       </>
                     ) : (
-                      <p className="text-sm text-green-800">N/A</p>
+                      <p className="text-xs text-emerald-800">N/A</p>
                     )}
                   </div>
                   
-                  <div className="p-3 bg-blue-50 rounded-lg">
+                  <div className="p-3 bg-sky-50/80 rounded-xl border border-sky-200">
                     <div className="flex items-center space-x-2 mb-1">
-                      <MapPin className="w-4 h-4 text-blue-600" />
-                      <p className="text-xs text-blue-700">Boarding</p>
+                      <MapPin className="w-4 h-4 text-sky-600" />
+                      <p className="text-[10px] font-bold text-sky-700 uppercase">Boarding Point</p>
                     </div>
-                    <p className="font-semibold text-blue-900">{upcomingTrip.busId?.boardingPoints?.[0] || 'N/A'}</p>
+                    <p className="font-bold text-xs text-sky-950 truncate">{upcomingTrip.busId?.boardingPoints?.[0] || 'N/A'}</p>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Shield className="w-4 h-4 text-primary-600" />
-                    <span className="text-sm text-gray-600">
-                      SmartSeat: {upcomingTrip.smartSeatMonitoring ? 'Enabled' : 'Disabled'}
-                    </span>
+                <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                  <div className="flex items-center space-x-2 text-xs font-semibold text-slate-600">
+                    <Shield className="w-4 h-4 text-cyan-600" />
+                    <span>SmartSeat Monitoring: <strong className="text-slate-900">{upcomingTrip.smartSeatMonitoring ? 'Active' : 'Off'}</strong></span>
                   </div>
                   <Link to={`/booking/${upcomingTrip._id}`}>
-                    <Button variant="outline" size="sm">
-                      View Details
+                    <Button variant="outline" size="sm" className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                      View Details →
                     </Button>
                   </Link>
                 </div>
-              </CardBody>
-            </Card>
-          ) : (
-            <Card>
-              <CardBody>
-                <div className="text-center py-8 text-gray-500">
-                  <Bus className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                  <p>No upcoming trips</p>
-                  <Link to="/search">
-                    <Button variant="primary" size="sm" className="mt-4" icon={Search}>
-                      Search Buses
-                    </Button>
-                  </Link>
-                </div>
-              </CardBody>
-            </Card>
-          )}
-
-          {/* Recent Bookings */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">Recent Bookings</h3>
-                <Link to="/my-bookings">
-                  <Button variant="ghost" size="sm">
-                    View All
+              </div>
+            ) : (
+              <div className="bg-white p-8 rounded-3xl border border-slate-200 text-center shadow-sm">
+                <Bus className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+                <h3 className="text-base font-bold text-slate-800 uppercase tracking-wider">No upcoming trips</h3>
+                <p className="text-xs text-slate-500 mt-1 mb-4">Book your next journey with 3D seat telemetry.</p>
+                <Link to="/search">
+                  <Button variant="primary" size="sm" icon={Search} className="bg-cyan-500 text-slate-950 font-bold text-xs uppercase tracking-wider">
+                    Search Buses
                   </Button>
                 </Link>
               </div>
-            </CardHeader>
-            <CardBody>
+            )}
+
+            {/* RECENT BOOKINGS FEED */}
+            <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">Recent Bookings</h3>
+                <Link to="/my-bookings">
+                  <Button variant="ghost" size="sm" className="text-xs text-cyan-600 hover:text-cyan-700 font-bold">
+                    View All →
+                  </Button>
+                </Link>
+              </div>
+
               {recentBookings.length > 0 ? (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {recentBookings.map(booking => (
-                    <div key={booking._id} className="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                    <div key={booking._id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:border-cyan-200 transition-all">
                       <div className="flex items-start justify-between mb-2">
                         <div>
-                          <p className="font-medium text-gray-900">{booking.routeId?.source || 'N/A'} → {booking.routeId?.destination || 'N/A'}</p>
-                          <p className="text-sm text-gray-600">{booking.busId?.operatorName || 'Bus Operator'}</p>
+                          <p className="font-bold text-sm text-slate-900">
+                            {booking.routeId?.source || 'N/A'} <span className="text-cyan-500 font-normal">→</span> {booking.routeId?.destination || 'N/A'}
+                          </p>
+                          <p className="text-xs font-medium text-slate-500">{booking.busId?.operatorName || 'Bus Operator'}</p>
                         </div>
-                        <Badge variant={booking.bookingStatus === 'confirmed' ? 'success' : 'default'}>
+                        <Badge variant={booking.bookingStatus === 'confirmed' ? 'success' : 'default'} className="text-[10px] uppercase font-bold">
                           {booking.bookingStatus || 'Unknown'}
                         </Badge>
                       </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-600">
+                      <div className="flex items-center justify-between text-xs pt-1">
+                        <span className="text-slate-500">
                           {booking.scheduleId?.departure ? formatDateTime(booking.scheduleId.departure).date : 'N/A'}
                         </span>
-                        <span className="font-medium text-primary-600">Seat {booking.seatNumber || 'N/A'}</span>
+                        <span className="font-bold text-cyan-700 font-mono">Seat {booking.seatNumber || 'N/A'}</span>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-4 text-gray-500">
-                  No recent bookings
+                <div className="text-center py-6 text-xs text-slate-400">
+                  No recent bookings recorded.
                 </div>
               )}
-            </CardBody>
-          </Card>
-        </div>
+            </div>
 
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Quick Actions */}
-          <Card>
-            <CardHeader>
-              <h3 className="text-lg font-semibold text-gray-900">Quick Actions</h3>
-            </CardHeader>
-            <CardBody>
-              <div className="space-y-3">
+          </div>
+
+          {/* RIGHT SIDEBAR */}
+          <div className="space-y-6">
+            
+            {/* QUICK ACTIONS CARD */}
+            <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
+              <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider border-b border-slate-100 pb-2">Quick Actions</h3>
+              <div className="space-y-2.5">
                 <Link to="/search" className="block">
-                  <Button variant="outline" className="w-full" icon={Search}>
+                  <Button variant="outline" className="w-full text-xs font-bold uppercase tracking-wider text-slate-700 justify-start" icon={Search}>
                     Search Buses
                   </Button>
                 </Link>
                 <Link to="/my-bookings" className="block">
-                  <Button variant="outline" className="w-full" icon={Bus}>
+                  <Button variant="outline" className="w-full text-xs font-bold uppercase tracking-wider text-slate-700 justify-start" icon={Bus}>
                     My Bookings
                   </Button>
                 </Link>
                 <Link to="/notifications" className="block">
-                  <Button variant="outline" className="w-full" icon={Bell}>
-                    Notifications
+                  <Button variant="outline" className="w-full text-xs font-bold uppercase tracking-wider text-slate-700 justify-between" icon={Bell}>
+                    <span>Notifications</span>
                     {unreadCount > 0 && (
-                      <span className="ml-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                      <span className="bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
                         {unreadCount}
                       </span>
                     )}
                   </Button>
                 </Link>
                 <Link to="/profile" className="block">
-                  <Button variant="outline" className="w-full" icon={User}>
-                    Profile
+                  <Button variant="outline" className="w-full text-xs font-bold uppercase tracking-wider text-slate-700 justify-start" icon={User}>
+                    Profile Settings
                   </Button>
                 </Link>
               </div>
-            </CardBody>
-          </Card>
+            </div>
 
-          {/* Notifications Preview */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>
+            {/* NOTIFICATIONS PREVIEW */}
+            <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">Notifications</h3>
                 {unreadCount > 0 && (
-                  <Badge variant="danger">{unreadCount} new</Badge>
+                  <Badge variant="danger" className="text-[10px] font-bold">{unreadCount} UNREAD</Badge>
                 )}
               </div>
-            </CardHeader>
-            <CardBody>
               <Link to="/notifications">
-                <Button variant="primary" className="w-full" icon={Bell}>
-                  View All Notifications
+                <Button variant="primary" className="w-full bg-cyan-500 text-slate-950 font-bold text-xs uppercase tracking-wider" icon={Bell}>
+                  Open Notification Center
                 </Button>
               </Link>
-            </CardBody>
-          </Card>
+            </div>
 
-          {/* SmartSeat Status */}
-          <Card className="bg-primary-50 border-primary-200">
-            <CardHeader>
-              <div className="flex items-center space-x-2">
-                <Shield className="w-5 h-5 text-primary-600" />
-                <h3 className="text-lg font-semibold text-primary-900">SmartSeat Status</h3>
+            {/* SMARTSEAT TELEMETRY STATUS */}
+            <div className="bg-gradient-to-br from-cyan-950 to-slate-950 text-white p-6 rounded-3xl border border-cyan-500/30 shadow-xl space-y-3">
+              <div className="flex items-center space-x-2 text-cyan-400">
+                <Shield className="w-5 h-5" />
+                <h3 className="text-xs font-black uppercase tracking-wider">SMARTSEAT TELEMETRY</h3>
               </div>
-            </CardHeader>
-            <CardBody>
-              <p className="text-sm text-primary-800 mb-3">
+              <p className="text-xs text-slate-300">
                 {stats.smartSeatEnabled > 0 
-                  ? `Active on ${stats.smartSeatEnabled} booking(s)`
-                  : 'Not enabled on any bookings'
+                  ? `Active monitoring enabled on ${stats.smartSeatEnabled} booking(s)`
+                  : 'Monitoring currently inactive'
                 }
               </p>
-              <Link to="/preferences">
-                <Button variant="outline" size="sm" className="w-full bg-white">
-                  Configure Preferences
+              <Link to="/profile">
+                <Button variant="outline" size="sm" className="w-full bg-slate-900 text-cyan-300 border-cyan-500/40 text-xs font-bold uppercase tracking-wider">
+                  Configure Settings
                 </Button>
               </Link>
-            </CardBody>
-          </Card>
+            </div>
+
+          </div>
+
         </div>
       </div>
     </div>

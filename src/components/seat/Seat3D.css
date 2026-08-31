@@ -1,0 +1,1642 @@
+/* =========================================================
+   SMART SEAT — COMPACT 3D BUS + PREMIUM SEAT UI
+   ========================================================= */
+
+/* =========================================================
+   GLOBAL SEAT AREA
+   ========================================================= */
+
+.perspective-seat-container {
+  perspective: 1200px;
+  transform-style: preserve-3d;
+  position: relative;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+/* Prevent unnecessary scrollbars inside seat area */
+.perspective-seat-container,
+.perspective-seat-container * {
+  scrollbar-width: none;
+}
+
+.perspective-seat-container::-webkit-scrollbar {
+  display: none;
+}
+
+
+/* =========================================================
+   COMPACT BUS OUTER BLOCK
+   ========================================================= */
+
+.bus-cabin-container {
+  position: relative;
+
+  width: min(100%, 560px);
+
+  /* IMPORTANT:
+     Keeps popup and seat information visible */
+  overflow: visible !important;
+
+  margin: 0 auto;
+
+  padding: 18px 20px 20px;
+
+  border-radius: 24px;
+
+  background:
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(30, 64, 175, 0.30),
+      transparent 42%
+    ),
+    linear-gradient(
+      180deg,
+      #16243a 0%,
+      #101b2d 48%,
+      #0b1424 100%
+    );
+
+  border: 1px solid rgba(56, 189, 248, 0.28);
+
+  box-shadow:
+    0 20px 45px rgba(2, 8, 23, 0.45),
+    0 0 30px rgba(14, 165, 233, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+
+  transform: translateZ(0);
+}
+
+
+/* =========================================================
+   INNER BUS BODY
+   ========================================================= */
+
+.bus-cabin-container::before {
+  content: "";
+
+  position: absolute;
+  inset: 7px;
+
+  border-radius: 19px;
+
+  border: 1px solid rgba(125, 211, 252, 0.08);
+
+  pointer-events: none;
+
+  z-index: 0;
+}
+
+
+/* =========================================================
+   DRIVER / FRONT SECTION
+   ========================================================= */
+
+.bus-driver-area {
+  position: relative;
+
+  width: 100%;
+
+  min-height: 48px;
+
+  padding: 9px 13px;
+
+  margin-bottom: 14px;
+
+  border-radius: 14px;
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(30, 64, 175, 0.28),
+      rgba(15, 23, 42, 0.72)
+    );
+
+  border: 1px solid rgba(56, 189, 248, 0.20);
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 6px 18px rgba(2, 8, 23, 0.20);
+
+  z-index: 2;
+}
+
+
+/* =========================================================
+   DRIVER COCKPIT
+   ========================================================= */
+
+.driver-cockpit {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 10px;
+}
+
+
+/* =========================================================
+   BUS SEAT GRID AREA
+   ========================================================= */
+
+.seat-grid-container {
+  position: relative;
+
+  width: 100%;
+
+  padding: 8px 8px 12px;
+
+  overflow: visible !important;
+
+  z-index: 5;
+}
+
+
+/* =========================================================
+   SEAT ROW
+   ========================================================= */
+
+.seat-row {
+  position: relative;
+
+  display: grid;
+
+  grid-template-columns:
+    minmax(36px, 0.7fr)
+    1fr
+    1fr
+    30px
+    1fr
+    1fr
+    minmax(36px, 0.7fr);
+
+  align-items: center;
+
+  column-gap: 7px;
+
+  min-height: 43px;
+
+  margin-bottom: 5px;
+
+  overflow: visible !important;
+}
+
+
+/* =========================================================
+   ROW LABEL
+   ========================================================= */
+
+.seat-row-label {
+  font-size: 9px;
+
+  font-weight: 700;
+
+  letter-spacing: 0.06em;
+
+  color: #64748b;
+
+  text-align: center;
+
+  white-space: nowrap;
+}
+
+
+/* =========================================================
+   AISLE
+   ========================================================= */
+
+.aisle-line {
+  width: 100%;
+
+  height: 100%;
+
+  min-height: 34px;
+
+  border-radius: 10px;
+
+  background:
+    repeating-linear-gradient(
+      180deg,
+      rgba(56, 189, 248, 0.10) 0px,
+      rgba(56, 189, 248, 0.10) 5px,
+      transparent 5px,
+      transparent 10px
+    );
+
+  opacity: 0.55;
+}
+
+
+/* =========================================================
+   3D SEAT WRAPPER
+   ========================================================= */
+
+.seat-3d-wrapper {
+  position: relative;
+
+  width: 100%;
+
+  display: flex;
+
+  justify-content: center;
+
+  align-items: center;
+
+  transform-style: preserve-3d;
+
+  perspective: 800px;
+
+  user-select: none;
+
+  overflow: visible !important;
+
+  z-index: 5;
+
+  transition:
+    transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+    filter 0.25s ease;
+}
+
+
+/* Hover */
+.seat-3d-wrapper:hover:not(:disabled) {
+  transform:
+    translateY(-4px)
+    rotateX(7deg)
+    rotateY(-2deg)
+    scale(1.08);
+
+  z-index: 100;
+}
+
+
+/* Active */
+.seat-3d-wrapper:active:not(:disabled) {
+  transform:
+    translateY(-1px)
+    scale(0.97);
+}
+
+
+/* =========================================================
+   COMPACT 3D SEAT BODY
+   ========================================================= */
+
+.seat-3d-body {
+  position: relative;
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  /*
+     SMALLER SEAT SIZE
+  */
+  width: 38px;
+
+  height: 42px;
+
+  padding: 4px 3px 4px;
+
+  border-radius: 9px;
+
+  transform-style: preserve-3d;
+
+  transform:
+    rotateX(3deg)
+    translateZ(3px);
+
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    filter 0.25s ease;
+
+  box-shadow:
+    0 5px 8px rgba(2, 8, 23, 0.40),
+    0 2px 3px rgba(2, 8, 23, 0.25),
+    inset 0 1px 1px rgba(255, 255, 255, 0.35);
+
+  overflow: visible;
+}
+
+
+/* =========================================================
+   3D SEAT FRONT EDGE
+   ========================================================= */
+
+.seat-3d-body::after {
+  content: "";
+
+  position: absolute;
+
+  left: 4px;
+  right: 4px;
+
+  bottom: -4px;
+
+  height: 5px;
+
+  border-radius: 0 0 7px 7px;
+
+  background: rgba(0, 0, 0, 0.25);
+
+  transform:
+    translateZ(-2px)
+    rotateX(-20deg);
+
+  opacity: 0.75;
+
+  pointer-events: none;
+}
+
+
+/* =========================================================
+   3D SEAT TOP HIGHLIGHT
+   ========================================================= */
+
+.seat-3d-body::before {
+  content: "";
+
+  position: absolute;
+
+  top: 2px;
+  left: 4px;
+  right: 4px;
+
+  height: 5px;
+
+  border-radius: 7px;
+
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(255,255,255,0.38),
+      transparent
+    );
+
+  opacity: 0.75;
+
+  pointer-events: none;
+
+  z-index: 3;
+}
+
+
+/* =========================================================
+   SEAT HEADREST
+   ========================================================= */
+
+.seat-3d-headrest {
+  position: relative;
+
+  width: 70%;
+
+  height: 8px;
+
+  flex-shrink: 0;
+
+  border-radius:
+    5px 5px 3px 3px;
+
+  margin-bottom: 2px;
+
+  box-shadow:
+    inset 0 1px 1px rgba(255,255,255,0.42),
+    0 2px 3px rgba(0,0,0,0.28);
+
+  transform:
+    translateZ(5px);
+
+  transition: all 0.25s ease;
+}
+
+
+/* =========================================================
+   SEAT CUSHION
+   ========================================================= */
+
+.seat-3d-cushion {
+  position: relative;
+
+  width: 100%;
+
+  flex-grow: 1;
+
+  min-height: 20px;
+
+  border-radius: 6px;
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  justify-content: center;
+
+  font-size: 8px;
+
+  font-weight: 800;
+
+  letter-spacing: -0.01em;
+
+  text-align: center;
+
+  box-shadow:
+    inset 0 2px 3px rgba(0,0,0,0.25),
+    inset 0 -1px 1px rgba(255,255,255,0.10);
+
+  transform:
+    translateZ(4px);
+}
+
+
+/* =========================================================
+   ARMRESTS
+   ========================================================= */
+
+.seat-3d-armrest-left,
+.seat-3d-armrest-right {
+  position: absolute;
+
+  top: 29%;
+
+  width: 3px;
+
+  height: 48%;
+
+  border-radius: 4px;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255,255,255,0.45),
+      rgba(255,255,255,0.12)
+    );
+
+  box-shadow:
+    0 1px 2px rgba(0,0,0,0.30);
+
+  transform:
+    translateZ(5px);
+}
+
+.seat-3d-armrest-left {
+  left: -3px;
+}
+
+.seat-3d-armrest-right {
+  right: -3px;
+}
+
+
+/* =========================================================
+   AVAILABLE
+   ========================================================= */
+
+.seat-3d-available .seat-3d-body {
+  background:
+    linear-gradient(
+      145deg,
+      #34d399 0%,
+      #10b981 48%,
+      #047857 100%
+    );
+
+  border: 1px solid rgba(110, 231, 183, 0.85);
+
+  color: #ffffff;
+}
+
+.seat-3d-available .seat-3d-headrest {
+  background:
+    linear-gradient(
+      180deg,
+      #6ee7b7,
+      #059669
+    );
+}
+
+.seat-3d-available:hover .seat-3d-body {
+  transform:
+    translateZ(10px)
+    rotateX(-3deg);
+
+  box-shadow:
+    0 9px 18px rgba(5, 150, 105, 0.40),
+    0 0 16px rgba(52, 211, 153, 0.30),
+    inset 0 1px 2px rgba(255,255,255,0.50);
+}
+
+
+/* =========================================================
+   SELECTED
+   ========================================================= */
+
+.seat-3d-selected .seat-3d-body {
+  background:
+    linear-gradient(
+      145deg,
+      #38bdf8 0%,
+      #0284c7 48%,
+      #075985 100%
+    );
+
+  border: 1px solid #7dd3fc;
+
+  color: #ffffff;
+
+  box-shadow:
+    0 0 16px rgba(56,189,248,0.65),
+    0 8px 15px rgba(2,132,199,0.45),
+    inset 0 1px 2px rgba(255,255,255,0.50);
+
+  animation: compact-seat-pulse 2s ease-in-out infinite alternate;
+}
+
+.seat-3d-selected .seat-3d-headrest {
+  background:
+    linear-gradient(
+      180deg,
+      #bae6fd,
+      #0284c7
+    );
+}
+
+
+@keyframes compact-seat-pulse {
+  from {
+    box-shadow:
+      0 0 10px rgba(56,189,248,0.45),
+      0 6px 12px rgba(2,132,199,0.35);
+  }
+
+  to {
+    box-shadow:
+      0 0 19px rgba(56,189,248,0.75),
+      0 8px 16px rgba(2,132,199,0.50);
+  }
+}
+
+
+/* =========================================================
+   BOOKED
+   ========================================================= */
+
+.seat-3d-booked .seat-3d-body {
+  background:
+    linear-gradient(
+      145deg,
+      #64748b 0%,
+      #334155 45%,
+      #1e293b 100%
+    );
+
+  border: 1px solid #fb7185;
+
+  color: #e2e8f0;
+
+  box-shadow:
+    0 4px 8px rgba(0,0,0,0.40),
+    inset 0 1px 1px rgba(248,113,113,0.30);
+}
+
+.seat-3d-booked .seat-3d-headrest {
+  background:
+    linear-gradient(
+      180deg,
+      #fb7185,
+      #be123c
+    );
+}
+
+
+/* =========================================================
+   RESERVED
+   ========================================================= */
+
+.seat-3d-reserved .seat-3d-body {
+  background:
+    linear-gradient(
+      145deg,
+      #fbbf24 0%,
+      #d97706 48%,
+      #92400e 100%
+    );
+
+  border: 1px solid #fde68a;
+
+  color: #fffbeb;
+
+  box-shadow:
+    0 5px 10px rgba(217,119,6,0.35),
+    inset 0 1px 1px rgba(255,255,255,0.35);
+}
+
+.seat-3d-reserved .seat-3d-headrest {
+  background:
+    linear-gradient(
+      180deg,
+      #fef08a,
+      #d97706
+    );
+}
+
+
+/* =========================================================
+   UNAVAILABLE
+   ========================================================= */
+
+.seat-3d-unavailable .seat-3d-body {
+  background:
+    linear-gradient(
+      145deg,
+      #64748b,
+      #334155
+    );
+
+  border: 1px solid #94a3b8;
+
+  color: #cbd5e1;
+
+  opacity: 0.55;
+
+  box-shadow:
+    0 2px 5px rgba(0,0,0,0.30);
+}
+
+.seat-3d-unavailable .seat-3d-headrest {
+  background: #64748b;
+}
+
+
+/* =========================================================
+   RECOMMENDED / MONITORED
+   ========================================================= */
+
+.seat-3d-recommended .seat-3d-body,
+.seat-3d-monitored .seat-3d-body {
+  background:
+    linear-gradient(
+      145deg,
+      #2dd4bf 0%,
+      #0d9488 50%,
+      #115e59 100%
+    );
+
+  border: 1px solid #5eead4;
+
+  color: #ffffff;
+
+  box-shadow:
+    0 0 13px rgba(45,212,191,0.45),
+    0 6px 12px rgba(13,148,136,0.35),
+    inset 0 1px 2px rgba(255,255,255,0.40);
+}
+
+.seat-3d-recommended .seat-3d-headrest,
+.seat-3d-monitored .seat-3d-headrest {
+  background:
+    linear-gradient(
+      180deg,
+      #99f6e4,
+      #0d9488
+    );
+}
+
+
+/* =========================================================
+   SEAT LABEL
+   ========================================================= */
+
+.seat-number,
+.seat-label {
+  font-size: 7px;
+
+  font-weight: 800;
+
+  line-height: 1;
+
+  color: #ffffff;
+
+  text-shadow:
+    0 1px 2px rgba(0,0,0,0.40);
+
+  white-space: nowrap;
+}
+
+
+/* =========================================================
+   PASSENGER INFORMATION POPOVER
+   ========================================================= */
+
+.passenger-popover-card {
+  position: absolute;
+
+  z-index: 9999;
+
+  /*
+     Smaller but readable
+  */
+  width: 215px;
+
+  max-width: 215px;
+
+  padding: 12px;
+
+  border-radius: 13px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(15,23,42,0.98),
+      rgba(10,20,36,0.97)
+    );
+
+  backdrop-filter: blur(16px);
+
+  -webkit-backdrop-filter: blur(16px);
+
+  border: 1px solid rgba(56,189,248,0.35);
+
+  color: #f8fafc;
+
+  box-shadow:
+    0 18px 35px rgba(2,8,23,0.55),
+    0 0 20px rgba(14,165,233,0.12);
+
+  animation:
+    popover-fade-in
+    0.20s
+    cubic-bezier(0.16,1,0.3,1);
+
+  pointer-events: auto;
+
+  overflow: visible !important;
+}
+
+
+/* =========================================================
+   POPOVER HEADER
+   ========================================================= */
+
+.passenger-popover-card h3,
+.passenger-popover-card h4 {
+  margin: 0 0 8px;
+
+  color: #67e8f9;
+
+  font-size: 12px;
+
+  font-weight: 800;
+
+  letter-spacing: 0.02em;
+}
+
+
+/* =========================================================
+   POPOVER TEXT
+   ========================================================= */
+
+.passenger-popover-card p {
+  margin: 4px 0;
+
+  color: #cbd5e1;
+
+  font-size: 10px;
+
+  line-height: 1.45;
+}
+
+
+/* =========================================================
+   POPOVER LABELS
+   ========================================================= */
+
+.passenger-popover-card strong {
+  color: #f8fafc;
+
+  font-weight: 700;
+}
+
+
+/* =========================================================
+   POPOVER ANIMATION
+   ========================================================= */
+
+@keyframes popover-fade-in {
+  from {
+    opacity: 0;
+
+    transform:
+      translateY(5px)
+      scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+
+    transform:
+      translateY(0)
+      scale(1);
+  }
+}
+
+
+/* =========================================================
+   IMPORTANT — KEEP POPOVER VISIBLE
+   ========================================================= */
+
+/*
+   These rules are intentionally important because
+   parent containers often clip the passenger card.
+*/
+
+.bus-cabin-container,
+.seat-grid-container,
+.seat-row,
+.seat-3d-wrapper {
+  overflow: visible !important;
+}
+
+
+/* =========================================================
+   BUS SIDE DETAILS
+   ========================================================= */
+
+.bus-side-marker {
+  width: 3px;
+
+  height: 30px;
+
+  border-radius: 999px;
+
+  background:
+    linear-gradient(
+      180deg,
+      #38bdf8,
+      #0ea5e9
+    );
+
+  opacity: 0.65;
+
+  box-shadow:
+    0 0 8px rgba(56,189,248,0.35);
+}
+
+
+/* =========================================================
+   EMERGENCY EXIT
+   ========================================================= */
+
+.emergency-exit {
+  margin-top: 10px;
+
+  padding-top: 9px;
+
+  border-top:
+    1px solid
+    rgba(148,163,184,0.12);
+
+  color: #fb7185;
+
+  font-size: 8px;
+
+  font-weight: 700;
+
+  letter-spacing: 0.08em;
+}
+
+
+/* =========================================================
+   BUS FOOTER / LEGEND
+   ========================================================= */
+
+.seat-legend {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  flex-wrap: wrap;
+
+  gap: 8px;
+
+  width: min(100%, 560px);
+
+  margin: 10px auto 0;
+
+  padding: 9px 12px;
+
+  border-radius: 12px;
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(15,23,42,0.90),
+      rgba(15,23,42,0.72)
+    );
+
+  border:
+    1px solid
+    rgba(56,189,248,0.14);
+
+  box-shadow:
+    0 8px 18px rgba(2,8,23,0.18);
+}
+
+
+/* =========================================================
+   LEGEND ITEMS
+   ========================================================= */
+
+.seat-legend-item {
+  display: flex;
+
+  align-items: center;
+
+  gap: 5px;
+
+  color: #94a3b8;
+
+  font-size: 8px;
+
+  font-weight: 600;
+}
+
+
+/* =========================================================
+   SMALL LEGEND SEAT
+   ========================================================= */
+
+.seat-legend-item .seat-icon {
+  width: 14px;
+
+  height: 14px;
+
+  border-radius: 4px;
+
+  box-shadow:
+    inset 0 1px 1px rgba(255,255,255,0.35),
+    0 2px 4px rgba(0,0,0,0.30);
+}
+
+
+/* =========================================================
+   DESKTOP COMPACT MODE
+   ========================================================= */
+
+@media (min-width: 1024px) {
+
+  .bus-cabin-container {
+    width: 500px;
+
+    padding:
+      16px
+      18px
+      18px;
+  }
+
+  .seat-grid-container {
+    padding:
+      6px
+      7px
+      9px;
+  }
+
+  .seat-row {
+    grid-template-columns:
+      34px
+      1fr
+      1fr
+      26px
+      1fr
+      1fr
+      34px;
+
+    column-gap: 6px;
+
+    min-height: 40px;
+
+    margin-bottom: 4px;
+  }
+
+  .seat-3d-body {
+    width: 36px;
+
+    height: 40px;
+  }
+
+  .seat-3d-headrest {
+    height: 7px;
+  }
+
+  .seat-3d-cushion {
+    min-height: 19px;
+  }
+}
+
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (max-width: 768px) {
+
+  .bus-cabin-container {
+    width: min(100%, 480px);
+
+    padding:
+      14px
+      14px
+      16px;
+
+    border-radius: 20px;
+  }
+
+  .seat-row {
+    grid-template-columns:
+      25px
+      1fr
+      1fr
+      22px
+      1fr
+      1fr
+      25px;
+
+    column-gap: 5px;
+
+    min-height: 39px;
+  }
+
+  .seat-3d-body {
+    width: 34px;
+
+    height: 38px;
+  }
+
+  .passenger-popover-card {
+    width: 195px;
+
+    max-width: 195px;
+
+    padding: 10px;
+  }
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 520px) {
+
+  .perspective-seat-container {
+    width: 100%;
+
+    max-width: 100%;
+  }
+
+  .bus-cabin-container {
+    width: calc(100% - 12px);
+
+    padding:
+      11px
+      9px
+      13px;
+
+    border-radius: 17px;
+  }
+
+  .seat-grid-container {
+    padding:
+      5px
+      3px
+      7px;
+  }
+
+  .seat-row {
+    grid-template-columns:
+      20px
+      1fr
+      1fr
+      17px
+      1fr
+      1fr
+      20px;
+
+    column-gap: 3px;
+
+    min-height: 35px;
+
+    margin-bottom: 3px;
+  }
+
+  .seat-3d-body {
+    width: 29px;
+
+    height: 33px;
+
+    border-radius: 7px;
+
+    padding: 3px 2px;
+  }
+
+  .seat-3d-headrest {
+    height: 6px;
+
+    border-radius: 4px;
+  }
+
+  .seat-3d-cushion {
+    min-height: 16px;
+
+    border-radius: 5px;
+
+    font-size: 6px;
+  }
+
+  .seat-number,
+  .seat-label {
+    font-size: 6px;
+  }
+
+  .passenger-popover-card {
+    width: 180px;
+
+    max-width: 180px;
+
+    padding: 9px;
+  }
+
+  .passenger-popover-card p {
+    font-size: 9px;
+  }
+}
+
+
+/* =========================================================
+   VERY SMALL MOBILE
+   ========================================================= */
+
+@media (max-width: 380px) {
+
+  .bus-cabin-container {
+    padding:
+      9px
+      6px
+      11px;
+  }
+
+  .seat-row {
+    grid-template-columns:
+      17px
+      1fr
+      1fr
+      14px
+      1fr
+      1fr
+      17px;
+
+    column-gap: 2px;
+  }
+
+  .seat-3d-body {
+    width: 26px;
+
+    height: 30px;
+  }
+
+  .passenger-popover-card {
+    width: 165px;
+
+    max-width: 165px;
+  }
+}
+
+
+/* =========================================================
+   REDUCED MOTION
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+  .seat-3d-wrapper,
+  .seat-3d-body,
+  .passenger-popover-card {
+    transition: none !important;
+
+    animation: none !important;
+  }
+
+  .seat-3d-wrapper:hover:not(:disabled) {
+    transform: none;
+  }
+}
+
+
+/* =========================================================
+   SLEEPER BERTH UNITS
+   =========================================================
+   Each berth is a horizontal rectangle suggesting a lying berth.
+   Lower berths are slightly wider/taller than upper.
+   ========================================================= */
+
+.berth-unit {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+
+  width: 90px;
+  height: 52px;
+
+  border-radius: 10px;
+  padding: 4px 6px 4px;
+
+  cursor: pointer;
+  user-select: none;
+  overflow: visible;
+
+  transform-style: preserve-3d;
+  perspective: 800px;
+
+  transition:
+    transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.28s ease,
+    filter 0.28s ease;
+}
+
+.berth-unit:hover:not(:disabled) {
+  transform:
+    translateY(-5px)
+    rotateX(6deg)
+    scale(1.06);
+  z-index: 100;
+}
+
+/* Layer tag: UPPER / LOWER */
+.berth-layer-tag {
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.75;
+  margin-bottom: 2px;
+  text-align: center;
+  color: inherit;
+}
+
+/* Pillow at head end */
+.berth-pillow {
+  position: absolute;
+  top: 6px;
+  left: 5px;
+  width: 20px;
+  height: 100%;
+  max-height: 38px;
+  border-radius: 5px 3px 3px 5px;
+  background: rgba(255,255,255,0.22);
+  box-shadow: inset 0 1px 3px rgba(255,255,255,0.35);
+  transform: translateZ(3px);
+  flex-shrink: 0;
+}
+
+/* Mattress / bed surface */
+.berth-mattress {
+  position: relative;
+  width: 100%;
+  flex: 1;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  text-align: center;
+  padding-left: 24px;
+  box-shadow:
+    inset 0 2px 4px rgba(0,0,0,0.25),
+    inset 0 -1px 2px rgba(255,255,255,0.08);
+  transform: translateZ(4px);
+}
+
+/* Side rail */
+.berth-rail {
+  position: absolute;
+  right: 3px;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.18);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.30);
+}
+
+
+/* ── BERTH STATE COLOURS ── */
+
+.berth-available {
+  background: linear-gradient(145deg, #34d399 0%, #10b981 50%, #047857 100%);
+  border: 1.5px solid rgba(110,231,183,0.85);
+  color: #fff;
+  box-shadow: 0 6px 14px rgba(5,150,105,0.30);
+}
+
+.berth-available .berth-pillow {
+  background: rgba(110,231,183,0.35);
+}
+
+.berth-selected {
+  background: linear-gradient(145deg, #38bdf8 0%, #0284c7 50%, #075985 100%);
+  border: 1.5px solid #7dd3fc;
+  color: #fff;
+  box-shadow:
+    0 0 18px rgba(56,189,248,0.65),
+    0 8px 16px rgba(2,132,199,0.45);
+  animation: compact-seat-pulse 2s ease-in-out infinite alternate;
+}
+
+.berth-selected .berth-pillow {
+  background: rgba(186,230,253,0.4);
+}
+
+.berth-booked {
+  background: linear-gradient(145deg, #64748b 0%, #334155 45%, #1e293b 100%);
+  border: 1.5px solid #fb7185;
+  color: #e2e8f0;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.40);
+}
+
+.berth-booked .berth-pillow {
+  background: rgba(251,113,133,0.2);
+}
+
+.berth-reserved {
+  background: linear-gradient(145deg, #fbbf24 0%, #d97706 50%, #92400e 100%);
+  border: 1.5px solid #fde68a;
+  color: #fffbeb;
+  box-shadow: 0 5px 10px rgba(217,119,6,0.35);
+}
+
+.berth-unavailable {
+  background: linear-gradient(145deg, #64748b, #334155);
+  border: 1.5px solid #94a3b8;
+  color: #cbd5e1;
+  opacity: 0.55;
+}
+
+.berth-monitored,
+.berth-recommended {
+  background: linear-gradient(145deg, #2dd4bf 0%, #0d9488 50%, #115e59 100%);
+  border: 1.5px solid #5eead4;
+  color: #fff;
+  box-shadow:
+    0 0 14px rgba(45,212,191,0.45),
+    0 6px 12px rgba(13,148,136,0.35);
+}
+
+
+/* =========================================================
+   SEMI-SLEEPER RECLINER UNITS
+   =========================================================
+   Wider than seater, with a visually angled/reclined backrest.
+   ========================================================= */
+
+.recliner-unit {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+
+  width: 50px;
+  height: 58px;
+
+  border-radius: 10px 10px 8px 8px;
+  padding: 3px 4px 5px;
+
+  cursor: pointer;
+  user-select: none;
+  overflow: visible;
+
+  transform-style: preserve-3d;
+  perspective: 800px;
+
+  transition:
+    transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.28s ease,
+    filter 0.28s ease;
+}
+
+.recliner-unit:hover:not(:disabled) {
+  transform:
+    translateY(-5px)
+    rotateX(8deg)
+    scale(1.07);
+  z-index: 100;
+}
+
+/* Reclined backrest — angled for semi-sleeper feel */
+.recliner-back {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  right: 4px;
+  height: 52%;
+  border-radius: 6px 6px 3px 3px;
+  transform: rotateX(12deg) translateZ(4px) scaleX(0.92);
+  transform-origin: bottom center;
+  box-shadow:
+    inset 0 1px 2px rgba(255,255,255,0.35),
+    0 3px 6px rgba(0,0,0,0.28);
+  transition: transform 0.28s ease;
+}
+
+.recliner-unit:hover .recliner-back {
+  transform: rotateX(18deg) translateZ(6px) scaleX(0.92);
+}
+
+/* Seat cushion — wider than seater */
+.recliner-cushion {
+  position: relative;
+  width: 100%;
+  height: 40%;
+  border-radius: 5px 5px 7px 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  box-shadow:
+    inset 0 2px 4px rgba(0,0,0,0.25),
+    inset 0 -1px 2px rgba(255,255,255,0.08);
+  transform: translateZ(4px);
+  z-index: 2;
+}
+
+/* Armrests */
+.recliner-arm-left,
+.recliner-arm-right {
+  position: absolute;
+  top: 30%;
+  width: 4px;
+  height: 40%;
+  border-radius: 4px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.4), rgba(255,255,255,0.12));
+  box-shadow: 0 1px 3px rgba(0,0,0,0.30);
+  transform: translateZ(5px);
+}
+
+.recliner-arm-left  { left: -4px; }
+.recliner-arm-right { right: -4px; }
+
+/* Footrest — extended base for semi-sleeper */
+.recliner-foot {
+  position: absolute;
+  bottom: -5px;
+  left: 8px;
+  right: 8px;
+  height: 5px;
+  border-radius: 0 0 5px 5px;
+  background: rgba(0,0,0,0.28);
+  transform: rotateX(-15deg) translateZ(-2px);
+  opacity: 0.7;
+}
+
+
+/* ── RECLINER STATE COLOURS ── */
+
+.recliner-available {
+  background: linear-gradient(145deg, #34d399 0%, #10b981 50%, #047857 100%);
+  border: 1.5px solid rgba(110,231,183,0.85);
+  color: #fff;
+  box-shadow: 0 6px 14px rgba(5,150,105,0.28);
+}
+
+.recliner-available .recliner-back {
+  background: linear-gradient(170deg, #6ee7b7, #059669);
+}
+
+.recliner-available .recliner-cushion {
+  background: linear-gradient(180deg, #34d399, #047857);
+}
+
+.recliner-selected {
+  background: linear-gradient(145deg, #38bdf8 0%, #0284c7 50%, #075985 100%);
+  border: 1.5px solid #7dd3fc;
+  color: #fff;
+  box-shadow:
+    0 0 18px rgba(56,189,248,0.65),
+    0 8px 16px rgba(2,132,199,0.45);
+  animation: compact-seat-pulse 2s ease-in-out infinite alternate;
+}
+
+.recliner-selected .recliner-back {
+  background: linear-gradient(170deg, #bae6fd, #0284c7);
+}
+
+.recliner-selected .recliner-cushion {
+  background: linear-gradient(180deg, #38bdf8, #075985);
+}
+
+.recliner-booked {
+  background: linear-gradient(145deg, #64748b 0%, #334155 45%, #1e293b 100%);
+  border: 1.5px solid #fb7185;
+  color: #e2e8f0;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.40);
+}
+
+.recliner-booked .recliner-back {
+  background: linear-gradient(170deg, #fb7185, #be123c);
+}
+
+.recliner-booked .recliner-cushion {
+  background: linear-gradient(180deg, #64748b, #1e293b);
+}
+
+.recliner-reserved {
+  background: linear-gradient(145deg, #fbbf24 0%, #d97706 50%, #92400e 100%);
+  border: 1.5px solid #fde68a;
+  color: #fffbeb;
+}
+
+.recliner-reserved .recliner-back {
+  background: linear-gradient(170deg, #fef08a, #d97706);
+}
+
+.recliner-reserved .recliner-cushion {
+  background: linear-gradient(180deg, #fbbf24, #92400e);
+}
+
+.recliner-unavailable {
+  background: linear-gradient(145deg, #64748b, #334155);
+  border: 1.5px solid #94a3b8;
+  color: #cbd5e1;
+  opacity: 0.55;
+}
+
+.recliner-monitored,
+.recliner-recommended {
+  background: linear-gradient(145deg, #2dd4bf 0%, #0d9488 50%, #115e59 100%);
+  border: 1.5px solid #5eead4;
+  color: #fff;
+  box-shadow:
+    0 0 14px rgba(45,212,191,0.45),
+    0 6px 12px rgba(13,148,136,0.35);
+}
+
+.recliner-monitored .recliner-back,
+.recliner-recommended .recliner-back {
+  background: linear-gradient(170deg, #99f6e4, #0d9488);
+}
+
+.recliner-monitored .recliner-cushion,
+.recliner-recommended .recliner-cushion {
+  background: linear-gradient(180deg, #2dd4bf, #115e59);
+}
+
+
+/* =========================================================
+   RESPONSIVE ADJUSTMENTS FOR NEW LAYOUTS
+   ========================================================= */
+
+@media (max-width: 520px) {
+  .berth-unit {
+    width: 72px;
+    height: 44px;
+  }
+
+  .berth-pillow {
+    width: 16px;
+  }
+
+  .recliner-unit {
+    width: 40px;
+    height: 50px;
+  }
+}
+
+@media (max-width: 380px) {
+  .berth-unit {
+    width: 62px;
+    height: 40px;
+  }
+
+  .recliner-unit {
+    width: 36px;
+    height: 46px;
+  }
+}

@@ -49,6 +49,8 @@ const BookingFlow = () => {
 
   const [seatLayout, setSeatLayout] = useState([]);
   const [adjacentSeatInfo, setAdjacentSeatInfo] = useState(null);
+  // busType from the seat meta — drives layout rendering in SeatSelection
+  const [busType, setBusType] = useState('');
 
   const [passengerDetails, setPassengerDetails] = useState(null);
   const [bookingResult, setBookingResult] = useState(null);
@@ -423,6 +425,12 @@ const BookingFlow = () => {
 
         if (!cancelled) {
           setSeatLayout(seats);
+          // Capture busType from meta so SeatSelection can render the correct layout
+          const resolvedBusType =
+            seatsResponse?.meta?.busType ||
+            bookingBus?.busType ||
+            '';
+          setBusType(resolvedBusType);
           setErrorMessage('');
         }
 
@@ -1083,6 +1091,8 @@ const BookingFlow = () => {
               aisleAfter={
                 aisleAfter
               }
+
+              busType={busType}
             />
           )}
 
