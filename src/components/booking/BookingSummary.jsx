@@ -26,9 +26,16 @@ import { calculateGST } from '../../config/gst';
 const BookingSummary = ({
   bus,
   selectedSeat,
+  selectedSeats,
+  passengerCount = 1,
   passengerDetails,
+  multiPassengerDetails,
   smartSeatMonitoring,
 }) => {
+
+  // Derive the display seat(s) — multi takes precedence
+  const isMulti = passengerCount > 1 && Array.isArray(selectedSeats) && selectedSeats.length > 0;
+  const displaySeats = isMulti ? selectedSeats : (selectedSeat ? [selectedSeat] : []);
 
   // ==========================================================
   // SAFE OBJECTS
@@ -50,8 +57,12 @@ const BookingSummary = ({
 
   const fare = Number(schedule?.fare ?? bus?.fare ?? 0);
 
+  // For multi-passenger, multiply the per-seat fare by the number of selected seats
+  const seatCount = isMulti ? displaySeats.length : 1;
+  const totalFareBase = fare * (seatCount || 1);
+
   // GST breakdown (computed client-side for display; backend is the source of truth)
-  const { gstRate, gstAmount, totalAmount } = calculateGST(fare);
+  const { gstRate, gstAmount, totalAmount } = calculateGST(totalFareBase);
 
   // ==========================================================
   // DATE FORMATTER
@@ -191,27 +202,73 @@ const BookingSummary = ({
           </div>
         </div>
 
-        {/* SELECTED SEAT BADGE */}
-        <div className="p-4 bg-slate-900/90 rounded-xl border border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-cyan-500/20 border border-cyan-500/40 text-cyan-300">
+        {/* SELECTED SEAT(S) BADGE */}
+        <div className="p-4 bg-slate-900/90 rounded-xl border border-slate-800">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 rounded-lg bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 flex-shrink-0">
               <Armchair className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-[10px] text-slate-400 uppercase tracking-wider">Selected Seat</p>
-              <p className="text-lg font-black text-cyan-300">
-                {selectedSeat ? `#${selectedSeat}` : 'None Selected'}
+              <p className="text-[10px] text-slate-400 uppercase tracking-wider">
+                {isMulti ? `Selected Seats (${displaySeats.length} / ${passengerCount})` : 'Selected Seat'}
               </p>
+              {displaySeats.length === 0 ? (
+                <p className="text-lg font-black text-slate-500">None Selected</p>
+              ) : isMulti ? (
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {displaySeats.map(s => (
+                    <span key={s} className="text-xs font-black text-cyan-300 bg-cyan-950/60 border border-cyan-500/40 px-1.5 py-0.5 rounded font-mono">
+                      {s}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-lg font-black text-cyan-300">#{displaySeats[0]}</p>
+              )}
             </div>
           </div>
-
-          <Badge variant={selectedSeat ? 'success' : 'default'} className={selectedSeat ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : 'bg-slate-800 text-slate-400'}>
-            {selectedSeat ? 'CONFIRMED' : 'PENDING'}
-          </Badge>
+          {isMulti && (
+            <div className="mt-1">
+              <Badge
+                variant={displaySeats.length === passengerCount ? 'success' : 'default'}
+                className={displaySeats.length === passengerCount
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                  : 'bg-amber-500/20 text-amber-300 border-amber-500/40'}
+              >
+                {displaySeats.length === passengerCount ? 'ALL SELECTED' : 'INCOMPLETE'}
+              </Badge>
+            </div>
+          )}
+          {!isMulti && (
+            <Badge
+              variant={displaySeats.length > 0 ? 'success' : 'default'}
+              className={displaySeats.length > 0 ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : 'bg-slate-800 text-slate-400'}
+            >
+              {displaySeats.length > 0 ? 'CONFIRMED' : 'PENDING'}
+            </Badge>
+          )}
         </div>
 
-        {/* PASSENGER DETAILS IF AVAILABLE */}
-        {passengerDetails && (
+        {/* PASSENGER DETAILS */}
+        {isMulti && Array.isArray(multiPassengerDetails) && multiPassengerDetails.length > 0 ? (
+          <div className="p-4 bg-slate-900/80 rounded-xl border border-slate-800 space-y-3">
+            <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
+              <User className="w-4 h-4 text-cyan-400" />
+              <h4 className="font-bold text-xs text-white uppercase tracking-wider">Passengers</h4>
+            </div>
+            {multiPassengerDetails.map((pax, idx) => (
+              <div key={idx} className="text-xs space-y-0.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-4 h-4 rounded-full bg-cyan-600 text-white flex items-center justify-center text-[9px] font-bold flex-shrink-0">{idx + 1}</span>
+                  <span className="font-semibold text-white">{pax.fullName || pax.name || 'N/A'}</span>
+                  {selectedSeats[idx] && (
+                    <span className="ml-auto text-[10px] font-mono text-cyan-400">Seat {selectedSeats[idx]}</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : !isMulti && passengerDetails ? (
           <div className="p-4 bg-slate-900/80 rounded-xl border border-slate-800 space-y-2">
             <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
               <User className="w-4 h-4 text-cyan-400" />
@@ -232,7 +289,7 @@ const BookingSummary = ({
               </div>
             </div>
           </div>
-        )}
+        ) : null}
 
         {/* SMARTSEAT MONITORING INDICATOR */}
         <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
@@ -259,8 +316,8 @@ const BookingSummary = ({
 
           <div className="p-4 space-y-2 text-xs">
             <div className="flex justify-between text-slate-300">
-              <span>Base Seat Fare</span>
-              <span className="font-mono font-semibold">₹{fare.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span>{isMulti && seatCount > 1 ? `Base Fare (${seatCount} × ₹${fare.toLocaleString('en-IN')})` : 'Base Seat Fare'}</span>
+              <span className="font-mono font-semibold">₹{totalFareBase.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
             <div className="flex justify-between text-slate-300">
               <span>GST ({gstRate}%)</span>

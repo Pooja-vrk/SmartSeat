@@ -1,0 +1,464 @@
+/* ============================================================
+   SmartSeat Login — Full-viewport hero background
+   ============================================================ */
+
+/* ──────────────────────────────────────────────────────────
+   STEP 1: Make the sticky header transparent when the login
+   page is active. We use body:has(.lp-root) to scope these
+   overrides so they don't affect any other page.
+   ────────────────────────────────────────────────────────── */
+
+body:has(.lp-root) .ss-navbar {
+  background: rgba(3, 9, 20, 0.60) !important;
+  backdrop-filter: blur(16px) saturate(120%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(120%) !important;
+  box-shadow: none !important;
+  border-bottom-color: rgba(34, 211, 238, 0.10) !important;
+}
+
+/* Keep the animated top rainbow line but softer */
+body:has(.lp-root) .ss-navbar__topline {
+  opacity: 0.5 !important;
+}
+
+/* Nav text → white */
+body:has(.lp-root) .ss-navbar__brand-name,
+body:has(.lp-root) .ss-navbar__brand-accent,
+body:has(.lp-root) .ss-nav-link {
+  color: #e0f2fe !important;
+}
+
+body:has(.lp-root) .ss-nav-link--active {
+  color: #22d3ee !important;
+  background: rgba(34, 211, 238, 0.10) !important;
+}
+
+body:has(.lp-root) .ss-nav-link:hover {
+  color: #fff !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+body:has(.lp-root) .ss-btn--ghost {
+  color: #cbd5e1 !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
+}
+
+body:has(.lp-root) .ss-btn--ghost:hover {
+  background: rgba(255, 255, 255, 0.10) !important;
+  color: #fff !important;
+}
+
+/* Creator pill */
+body:has(.lp-root) .ss-navbar__creator-pill {
+  background: rgba(6, 182, 212, 0.10) !important;
+  border-color: rgba(34, 211, 238, 0.22) !important;
+}
+
+body:has(.lp-root) .ss-navbar__creator-name {
+  color: #22d3ee !important;
+}
+
+/* ──────────────────────────────────────────────────────────
+   STEP 2: lp-root covers the ENTIRE viewport — fixed so it
+   sits behind the sticky header as well as below it.
+   The layout <main> will still receive clicks; this is just
+   the visual layer.
+   ────────────────────────────────────────────────────────── */
+
+.lp-root {
+  /* Fix to viewport so the image starts at the very top edge,
+     behind the transparent header */
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+
+  /* hero.png full-bleed */
+  background-image: url('../../assets/hero.png');
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-color: #050d1a;
+
+  /* flex: card on the right, vertically centered */
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  overflow: hidden;
+}
+
+/* ──────────────────────────────────────────────────────────
+   STEP 3: Because lp-root is fixed, the <main> element in
+   Layout.jsx gets no height from it. We must give <main>
+   a minimum height to prevent the footer from rising up
+   and to reserve space for scroll if needed.
+   We do that by making the <main> on the login page at least
+   100vh tall — targeted via body:has selector.
+   ────────────────────────────────────────────────────────── */
+
+body:has(.lp-root) main {
+  min-height: 100vh;
+  position: relative; /* create stacking context */
+  z-index: 1;         /* above lp-root (z:0) so the card is clickable */
+  /* pointer-events passthrough to the fixed lp-root behind */
+  pointer-events: none;
+}
+
+/* Re-enable pointer events for the card container itself */
+body:has(.lp-root) main .lp-right {
+  pointer-events: auto;
+}
+
+/* Hide the footer on login page — it would sit below the hero */
+body:has(.lp-root) footer {
+  display: none !important;
+}
+
+/* ── dark overlay across the full viewport ───────────────── */
+
+.lp-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background:
+    /* right half gets darker so card is readable */
+    linear-gradient(
+      to right,
+      rgba(5, 13, 26, 0.15)  0%,
+      rgba(5, 13, 26, 0.25) 35%,
+      rgba(5, 13, 26, 0.65) 60%,
+      rgba(5, 13, 26, 0.88) 100%
+    ),
+    /* top vignette */
+    linear-gradient(
+      to bottom,
+      rgba(5, 13, 26, 0.50) 0%,
+      transparent 15%
+    ),
+    /* bottom vignette */
+    linear-gradient(
+      to top,
+      rgba(5, 13, 26, 0.50) 0%,
+      transparent 18%
+    );
+}
+
+/* ── right panel: full-width flex, card right-aligned ───── */
+
+.lp-right {
+  position: relative;
+  z-index: 2;          /* above the overlay */
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem 1.25rem;
+  padding-top: 88px;   /* clear the 72 px sticky header + breathing room */
+}
+
+@media (min-width: 768px) {
+  .lp-right {
+    justify-content: flex-end;
+    padding: 2rem 4rem;
+    padding-top: 88px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .lp-right {
+    padding: 2rem 7vw;
+    padding-top: 88px;
+  }
+}
+
+/* ── login card ──────────────────────────────────────────── */
+
+.lp-card {
+  width: 100%;
+  max-width: 420px;
+  background: rgba(5, 14, 30, 0.82);
+  border: 1px solid rgba(34, 211, 238, 0.22);
+  border-radius: 1.5rem;
+  padding: 2.25rem 2rem;
+  box-shadow:
+    0 0 0 1px rgba(6, 182, 212, 0.05),
+    0 12px 48px rgba(0, 0, 0, 0.65),
+    0 0 100px rgba(6, 182, 212, 0.05);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+@media (min-width: 480px) {
+  .lp-card { padding: 2.5rem 2.25rem; }
+}
+
+/* ── card logo ───────────────────────────────────────────── */
+
+.lp-card__logo {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.lp-card__logo-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 0.75rem;
+  background: linear-gradient(135deg, #06b6d4 0%, #14b8a6 100%);
+  box-shadow: 0 4px 14px rgba(6, 182, 212, 0.38);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.lp-card__logo-name {
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: -0.02em;
+}
+
+.lp-card__logo-accent { color: #22d3ee; }
+
+/* ── heading ─────────────────────────────────────────────── */
+
+.lp-card__title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #f0f9ff;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.2rem;
+}
+
+.lp-card__sub {
+  font-size: 0.85rem;
+  color: rgba(148, 210, 231, 0.70);
+  margin: 0;
+}
+
+/* ── toggle ──────────────────────────────────────────────── */
+
+.lp-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.25rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(34, 211, 238, 0.12);
+  border-radius: 0.875rem;
+  padding: 0.25rem;
+}
+
+.lp-toggle__btn {
+  padding: 0.55rem 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border-radius: 0.65rem;
+  border: none;
+  cursor: pointer;
+  color: rgba(148, 210, 231, 0.60);
+  background: transparent;
+  transition: background 0.18s, color 0.18s;
+}
+
+.lp-toggle__btn:hover { color: #e0f2fe; }
+
+.lp-toggle__btn--active {
+  background: rgba(6, 182, 212, 0.18);
+  color: #22d3ee;
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1px rgba(34, 211, 238, 0.22);
+}
+
+/* ── form ────────────────────────────────────────────────── */
+
+.lp-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* ── error ───────────────────────────────────────────────── */
+
+.lp-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.7rem 0.875rem;
+  border-radius: 0.75rem;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.30);
+  color: #fca5a5;
+  font-size: 0.8125rem;
+}
+
+/* ── field ───────────────────────────────────────────────── */
+
+.lp-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.lp-field__label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.lp-field__label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: rgba(148, 210, 231, 0.75);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.lp-field__forgot {
+  font-size: 0.72rem;
+  color: #22d3ee;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.lp-field__forgot:hover { color: #67e8f9; }
+
+.lp-field__wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.lp-field__icon {
+  position: absolute;
+  left: 0.85rem;
+  width: 16px;
+  height: 16px;
+  color: rgba(34, 211, 238, 0.50);
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+.lp-field__input {
+  width: 100%;
+  padding: 0.75rem 1rem 0.75rem 2.5rem;
+  font-size: 0.875rem;
+  color: #e0f2fe;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1.5px solid rgba(34, 211, 238, 0.15);
+  border-radius: 0.75rem;
+  outline: none;
+  transition: border-color 0.18s, box-shadow 0.18s, background 0.18s;
+  -webkit-appearance: none;
+}
+
+.lp-field__input::placeholder { color: rgba(148, 210, 231, 0.35); }
+
+.lp-field__input:focus {
+  border-color: rgba(34, 211, 238, 0.55);
+  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.12);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.lp-field__input--pw { padding-right: 3rem; }
+
+.lp-field__eye {
+  position: absolute;
+  right: 0.85rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: rgba(34, 211, 238, 0.45);
+  display: flex;
+  align-items: center;
+  padding: 0.2rem;
+  border-radius: 0.35rem;
+  transition: color 0.15s;
+}
+
+.lp-field__eye:hover { color: #22d3ee; }
+
+/* ── submit ──────────────────────────────────────────────── */
+
+.lp-submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.875rem 1.5rem;
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #06b6d4 0%, #14b8a6 100%);
+  border: none;
+  border-radius: 0.875rem;
+  cursor: pointer;
+  box-shadow:
+    0 4px 18px rgba(6, 182, 212, 0.38),
+    inset 0 0 0 1px rgba(34, 211, 238, 0.20);
+  transition:
+    transform  0.18s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.18s ease,
+    filter     0.18s ease;
+}
+
+.lp-submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(6, 182, 212, 0.48);
+  filter: brightness(1.06);
+}
+
+.lp-submit:active:not(:disabled) {
+  transform: translateY(0);
+  filter: brightness(0.96);
+}
+
+.lp-submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ── register / back ─────────────────────────────────────── */
+
+.lp-register {
+  text-align: center;
+  font-size: 0.8rem;
+  color: rgba(148, 210, 231, 0.55);
+  margin: 0;
+}
+
+.lp-register__link {
+  color: #22d3ee;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.lp-register__link:hover {
+  color: #67e8f9;
+  text-decoration: underline;
+}
+
+.lp-back { text-align: center; margin: 0; }
+
+.lp-back__link {
+  font-size: 0.73rem;
+  color: rgba(148, 210, 231, 0.35);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.lp-back__link:hover { color: rgba(148, 210, 231, 0.70); }
+
+/* ── reduced motion ──────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-submit { transition: none !important; }
+  .lp-submit:hover:not(:disabled) { transform: none !important; }
+}

@@ -12,6 +12,7 @@ const ChangeSeat = () => {
   const navigate = useNavigate();
   const [booking, setBooking] = useState(null);
   const [seatLayout, setSeatLayout] = useState(null);
+  const [busType, setBusType] = useState('');
   const [selectedSeat, setSelectedSeat] = useState(null);
   const [loading, setLoading] = useState(true);
   const [changing, setChanging] = useState(false);
@@ -49,6 +50,12 @@ const ChangeSeat = () => {
           );
           if (seatsResponse.success) {
             setSeatLayout(seatsResponse.data);
+            // Capture busType from meta so SeatSelection renders the correct layout
+            const resolvedBusType =
+              seatsResponse.meta?.busType ||
+              booking.busId?.busType ||
+              '';
+            setBusType(resolvedBusType);
           }
         }
       }
@@ -90,16 +97,23 @@ const ChangeSeat = () => {
     setChanging(true);
     setError(null);
     try {
-      const targetBookingId = booking._id || booking.bookingId;
+      // Explicitly stringify to prevent [object Object] in the URL
+      const targetBookingId = String(booking._id || booking.bookingId);
       const response = await bookingService.changeSeat(targetBookingId, selectedSeat);
       if (response.success) {
+        // Reload booking so the updated seatNumber is shown if user navigates back
+        try { await loadBooking(); } catch (_) { /* non-fatal */ }
         alert(`Seat changed successfully! Your new seat is ${selectedSeat}.`);
         navigate('/my-bookings');
       } else {
-        setError(response.message || 'Failed to change seat');
+        setError(response.message || 'Failed to change seat. Please try again.');
       }
     } catch (err) {
-      setError(err?.message || err?.response?.data?.message || 'Failed to change seat');
+      const msg =
+        err?.response?.data?.message ||
+        err?.message ||
+        'Failed to change seat. Please try again.';
+      setError(msg);
       console.error('Error changing seat:', err);
     } finally {
       setChanging(false);
@@ -194,8 +208,9 @@ const ChangeSeat = () => {
               
               {seatLayout ? (
                 <SeatSelection
-                  busId={booking.busId?._id}
+                  busId={booking.busId?._id || booking.busId}
                   seatLayout={seatLayout}
+                  busType={busType}
                   selectedSeat={selectedSeat}
                   onSeatSelect={handleSeatSelect}
                   onSeatDeselect={() => setSelectedSeat(null)}
@@ -229,24 +244,22 @@ const ChangeSeat = () => {
       </div>
 
       {/* Confirmation Modal */}
-      {showConfirmModal && (
-        <Modal onClose={() => setShowConfirmModal(false)}>
-          <div className="p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Confirm Seat Change</h3>
-            <p className="text-gray-600 mb-4">
-              Are you sure you want to change your seat from <strong>{booking.seatNumber}</strong> to <strong>{selectedSeat}</strong>?
-            </p>
-            <div className="flex justify-end space-x-3">
-              <Button variant="outline" onClick={() => setShowConfirmModal(false)}>
-                Cancel
-              </Button>
-              <Button variant="primary" onClick={confirmChangeSeat} disabled={changing}>
-                {changing ? 'Processing...' : 'Confirm Change'}
-              </Button>
-            </div>
+      <Modal isOpen={showConfirmModal} onClose={() => setShowConfirmModal(false)}>
+        <div className="p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Confirm Seat Change</h3>
+          <p className="text-gray-600 mb-4">
+            Are you sure you want to change your seat from <strong>{booking.seatNumber}</strong> to <strong>{selectedSeat}</strong>?
+          </p>
+          <div className="flex justify-end space-x-3">
+            <Button variant="outline" onClick={() => setShowConfirmModal(false)}>
+              Cancel
+            </Button>
+            <Button variant="primary" onClick={confirmChangeSeat} disabled={changing}>
+              {changing ? 'Processing...' : 'Confirm Change'}
+            </Button>
           </div>
-        </Modal>
-      )}
+        </div>
+      </Modal>
     </div>
   );
 };

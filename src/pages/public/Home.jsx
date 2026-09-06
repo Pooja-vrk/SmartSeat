@@ -120,7 +120,7 @@ const SEAT_STATES = [
 // ─────────────────────────────────────────────
 
 const Home = () => {
-  const [searchParams, setSearchParams] = useState({ from: '', to: '', date: '' });
+  const [searchParams, setSearchParams] = useState({ from: '', to: '', date: '', passengers: 1 });
   const [routes, setRoutes] = useState([]);
 
   // Fetch real routes for dropdown population
@@ -171,10 +171,11 @@ const Home = () => {
     setSearchParams(prev => ({ ...prev, from: newFrom, to: isToValid ? prev.to : '' }));
   };
 
-  // Preserve existing search handler exactly
+  // Preserve existing search handler exactly — now includes passengers count
   const handleSearch = (e) => {
     e.preventDefault();
-    window.location.href = `/search?from=${encodeURIComponent(searchParams.from)}&to=${encodeURIComponent(searchParams.to)}&date=${encodeURIComponent(searchParams.date)}`;
+    const passengers = Number(searchParams.passengers) || 1;
+    window.location.href = `/search?from=${encodeURIComponent(searchParams.from)}&to=${encodeURIComponent(searchParams.to)}&date=${encodeURIComponent(searchParams.date)}&passengers=${passengers}`;
   };
 
   return (
@@ -401,6 +402,91 @@ const Home = () => {
                     required
                     aria-label="Travel date"
                   />
+                </div>
+              </div>
+
+              {/* PASSENGERS */}
+              <div className="ss-search-form__field">
+                <label className="ss-search-form__label" htmlFor="home-passengers">
+                  PASSENGERS
+                </label>
+                <div className="ss-search-form__input-wrap" style={{ paddingLeft: 0 }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      width: '100%',
+                      background: '#fff',
+                      border: '1.5px solid #e2e8f0',
+                      borderRadius: '0.875rem',
+                      overflow: 'hidden',
+                      height: '48px',
+                    }}
+                  >
+                    <button
+                      type="button"
+                      aria-label="Decrease passengers"
+                      onClick={() =>
+                        setSearchParams(prev => ({
+                          ...prev,
+                          passengers: Math.max(1, Number(prev.passengers) - 1),
+                        }))
+                      }
+                      style={{
+                        width: '44px',
+                        height: '100%',
+                        fontSize: '1.25rem',
+                        fontWeight: 700,
+                        color: '#0891b2',
+                        background: 'transparent',
+                        border: 'none',
+                        cursor: searchParams.passengers <= 1 ? 'not-allowed' : 'pointer',
+                        opacity: searchParams.passengers <= 1 ? 0.35 : 1,
+                        flexShrink: 0,
+                      }}
+                      disabled={searchParams.passengers <= 1}
+                    >
+                      −
+                    </button>
+                    <span
+                      id="home-passengers"
+                      style={{
+                        flex: 1,
+                        textAlign: 'center',
+                        fontWeight: 700,
+                        fontSize: '0.9375rem',
+                        color: '#0f172a',
+                        userSelect: 'none',
+                      }}
+                    >
+                      {searchParams.passengers} {searchParams.passengers === 1 ? 'Passenger' : 'Passengers'}
+                    </span>
+                    <button
+                      type="button"
+                      aria-label="Increase passengers"
+                      onClick={() =>
+                        setSearchParams(prev => ({
+                          ...prev,
+                          passengers: Math.min(6, Number(prev.passengers) + 1),
+                        }))
+                      }
+                      style={{
+                        width: '44px',
+                        height: '100%',
+                        fontSize: '1.25rem',
+                        fontWeight: 700,
+                        color: '#0891b2',
+                        background: 'transparent',
+                        border: 'none',
+                        cursor: searchParams.passengers >= 6 ? 'not-allowed' : 'pointer',
+                        opacity: searchParams.passengers >= 6 ? 0.35 : 1,
+                        flexShrink: 0,
+                      }}
+                      disabled={searchParams.passengers >= 6}
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
               </div>
 

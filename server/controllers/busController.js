@@ -6,6 +6,100 @@ const Route = require('../models/Route');
 const Seat = require('../models/Seat');
 
 const asyncHandler = require('../utils/asyncHandler');
+const { generateSeatLayout } = require('../utils/seatUtils');
+
+const MAX_SCHEDULE_HORIZON_DAYS = 365;
+
+const utcDayBounds = (dateValue) => {
+  const searchDate = new Date(dateValue);
+  if (Number.isNaN(searchDate.getTime())) return null;
+
+  const dayStart = new Date(searchDate);
+  dayStart.setUTCHours(0, 0, 0, 0);
+
+  const dayEnd = new Date(searchDate);
+  dayEnd.setUTCHours(23, 59, 59, 999);
+
+  return { dayStart, dayEnd, searchDate };
+};
+
+const isPastUtcDay = (dayStart) => {
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  return dayStart < today;
+};
+
+const isBeyondHorizon = (dayStart) => {
+  const limit = new Date();
+  limit.setUTCHours(0, 0, 0, 0);
+  limit.setUTCDate(limit.getUTCDate() + MAX_SCHEDULE_HORIZON_DAYS);
+  return dayStart > limit;
+};
+
+/**
+ * Clone existing route services onto a requested future date when that date
+ * has no schedules yet. Each cloned schedule gets its own seat documents so
+ * bookings never leak across dates.
+ */
+const ensureSchedulesForDate = async (routeIds, dateValue) => {
+  const bounds = utcDayBounds(dateValue);
+  if (!bounds || !routeIds.length) return;
+
+  const { dayStart, dayEnd } = bounds;
+  if (isPastUtcDay(dayStart) || isBeyondHorizon(dayStart)) return;
+
+  const existing = await Schedule.find({
+    routeId: { $in: routeIds },
+    isActive: true,
+    travelDate: { $gte: dayStart, $lte: dayEnd }
+  }).select('_id busId departureTime');
+
+  const existingKeys = new Set(
+    existing.map((s) => `${s.busId}_${s.departureTime}`)
+  );
+
+  const templates = await Schedule.find({
+    routeId: { $in: routeIds },
+    isActive: true
+  })
+    .populate('busId')
+    .sort({ travelDate: 1 });
+
+  const uniqueTemplates = new Map();
+  for (const tmpl of templates) {
+    if (!tmpl.busId?._id) continue;
+    const key = `${tmpl.busId._id}_${tmpl.departureTime}`;
+    if (!uniqueTemplates.has(key)) {
+      uniqueTemplates.set(key, tmpl);
+    }
+  }
+
+  for (const [key, tmpl] of uniqueTemplates.entries()) {
+    if (existingKeys.has(key)) continue;
+
+    const bus = tmpl.busId;
+    const totalSeats = bus.seatConfiguration?.totalSeats || 0;
+
+    const created = await Schedule.create({
+      busId: bus._id,
+      routeId: tmpl.routeId,
+      departureTime: tmpl.departureTime,
+      arrivalTime: tmpl.arrivalTime,
+      travelDate: dayStart,
+      fare: tmpl.fare,
+      isActive: true,
+      availableSeats: totalSeats
+    });
+
+    await generateSeatLayout(
+      bus._id,
+      created._id,
+      bus.seatConfiguration,
+      bus.busType,
+      tmpl.fare
+    );
+  }
+};
 
 // ============================================================
 // SEARCH BUSES
@@ -60,21 +154,14 @@ exports.searchBuses = asyncHandler(async (req, res) => {
   };
 
   if (date) {
-    // Parse the date string as UTC midnight to match how the seed stores dates.
-    // "2026-08-25" → new Date("2026-08-25") = 2026-08-25T00:00:00.000Z
-    // Query covers the full UTC day: 00:00:00 ≤ travelDate ≤ 23:59:59
-    const searchDate = new Date(date);
+    const bounds = utcDayBounds(date);
 
-    if (!Number.isNaN(searchDate.getTime())) {
-      const dayStart = new Date(searchDate);
-      dayStart.setUTCHours(0, 0, 0, 0);
-
-      const dayEnd = new Date(searchDate);
-      dayEnd.setUTCHours(23, 59, 59, 999);
+    if (bounds) {
+      await ensureSchedulesForDate(routeIds, date);
 
       scheduleQuery.travelDate = {
-        $gte: dayStart,
-        $lte: dayEnd
+        $gte: bounds.dayStart,
+        $lte: bounds.dayEnd
       };
     }
   }

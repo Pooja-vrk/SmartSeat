@@ -198,13 +198,19 @@ const Dashboard = () => {
                       <Calendar className="w-4 h-4 text-emerald-600" />
                       <p className="text-[10px] font-bold text-emerald-700 uppercase">Departure</p>
                     </div>
-                    {upcomingTrip.scheduleId?.departure ? (
+                    {upcomingTrip.scheduleId?.travelDate ? (
                       <>
-                        <p className="font-bold text-xs text-emerald-950">{formatDateTime(upcomingTrip.scheduleId.departure).date}</p>
-                        <p className="text-xs text-emerald-800">{formatDateTime(upcomingTrip.scheduleId.departure).time}</p>
+                        <p className="font-bold text-xs text-emerald-950">
+                          {new Date(upcomingTrip.scheduleId.travelDate).toLocaleDateString('en-US', {
+                            weekday: 'short', month: 'short', day: 'numeric'
+                          })}
+                        </p>
+                        <p className="text-xs text-emerald-800">
+                          {upcomingTrip.scheduleId?.departureTime || '—'}
+                        </p>
                       </>
                     ) : (
-                      <p className="text-xs text-emerald-800">N/A</p>
+                      <p className="text-xs text-emerald-800">Not specified</p>
                     )}
                   </div>
                   
@@ -213,7 +219,9 @@ const Dashboard = () => {
                       <MapPin className="w-4 h-4 text-sky-600" />
                       <p className="text-[10px] font-bold text-sky-700 uppercase">Boarding Point</p>
                     </div>
-                    <p className="font-bold text-xs text-sky-950 truncate">{upcomingTrip.busId?.boardingPoints?.[0] || 'N/A'}</p>
+                    <p className="font-bold text-xs text-sky-950 truncate">
+                      {upcomingTrip.busId?.boardingPoints?.[0] || upcomingTrip.routeId?.source || 'Not specified'}
+                    </p>
                   </div>
                 </div>
 
@@ -222,7 +230,7 @@ const Dashboard = () => {
                     <Shield className="w-4 h-4 text-cyan-600" />
                     <span>SmartSeat Monitoring: <strong className="text-slate-900">{upcomingTrip.smartSeatMonitoring ? 'Active' : 'Off'}</strong></span>
                   </div>
-                  <Link to={`/booking/${upcomingTrip._id}`}>
+                  <Link to={`/ticket/${upcomingTrip._id}`}>
                     <Button variant="outline" size="sm" className="text-xs font-bold uppercase tracking-wider text-slate-700">
                       View Details →
                     </Button>
@@ -270,7 +278,9 @@ const Dashboard = () => {
                       </div>
                       <div className="flex items-center justify-between text-xs pt-1">
                         <span className="text-slate-500">
-                          {booking.scheduleId?.departure ? formatDateTime(booking.scheduleId.departure).date : 'N/A'}
+                          {booking.scheduleId?.travelDate
+                            ? new Date(booking.scheduleId.travelDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+                            : (booking.scheduleId?.departureTime || 'Not specified')}
                         </span>
                         <span className="font-bold text-cyan-700 font-mono">Seat {booking.seatNumber || 'N/A'}</span>
                       </div>

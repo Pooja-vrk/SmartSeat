@@ -1,186 +1,201 @@
-// Login page
+// Login page — SmartSeat dark-theme redesign
+// Authentication logic is UNCHANGED. UI only.
+
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Card, CardHeader, CardBody, Button, Input } from '../../components/common';
 import { useAuth } from '../../context/AuthContext';
-import { Bus, User, Lock, AlertCircle } from 'lucide-react';
+import {
+  Bus,
+  Eye,
+  EyeOff,
+  AlertCircle,
+  ArrowRight,
+  Mail,
+  Lock,
+} from 'lucide-react';
+import './Login.css';
 
 const Login = () => {
-  const [userType, setUserType] = useState('passenger');
-  const [formData, setFormData] = useState({
-    email: '',
-    password: ''
-  });
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [userType, setUserType]         = useState('passenger');
+  const [formData, setFormData]         = useState({ email: '', password: '' });
+  const [error, setError]               = useState('');
+  const [loading, setLoading]           = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  
-  const { login } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
-  
-  const from = location.state?.from || '/dashboard';
+
+  const { login }  = useAuth();
+  const navigate   = useNavigate();
+  const location   = useLocation();
+  const from       = location.state?.from || '/dashboard';
+
+  // ── Handlers — unchanged ─────────────────────────────────
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-
     try {
       const response = await login(formData.email, formData.password, userType);
       if (response.success) {
         navigate(userType === 'admin' ? '/admin' : from, { replace: true });
       } else {
-        setError(response.message || 'Login failed');
+        setError(response.message || 'Login failed. Please check your credentials.');
       }
-    } catch (err) {
-      setError('An error occurred during login');
+    } catch {
+      setError('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-  };
+  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+
+  const isPassenger = userType === 'passenger';
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-gradient-to-br from-primary-50 to-secondary-50">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center space-x-2 mb-4">
-            <Bus className="w-10 h-10 text-primary-600" />
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent">
-              SmartSeat
-            </h1>
+    // lp-root: full-page hero background; card floats on the right
+    <div className="lp-root">
+
+      {/* dark overlay over the entire background */}
+      <div className="lp-overlay" aria-hidden="true" />
+
+      {/* right-aligned card column */}
+      <div className="lp-right">
+        <div className="lp-card">
+
+          {/* logo */}
+          <div className="lp-card__logo">
+            <div className="lp-card__logo-icon">
+              <Bus className="w-5 h-5 text-white" aria-hidden="true" />
+            </div>
+            <span className="lp-card__logo-name">
+              SMART<span className="lp-card__logo-accent">SEAT</span>
+            </span>
           </div>
-          <p className="text-gray-600">Sign in to your account</p>
-        </div>
 
-        {/* User Type Toggle */}
-        <div className="flex mb-6 bg-white rounded-lg p-1 shadow-sm">
-          <button
-            onClick={() => setUserType('passenger')}
-            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${
-              userType === 'passenger'
-                ? 'bg-primary-600 text-white'
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            Passenger
-          </button>
-          <button
-            onClick={() => setUserType('admin')}
-            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${
-              userType === 'admin'
-                ? 'bg-primary-600 text-white'
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            Admin
-          </button>
-        </div>
-
-        {/* Login Form */}
-        <Card>
-          <CardHeader>
-            <h2 className="text-xl font-semibold text-gray-900">
-              {userType === 'passenger' ? 'Passenger Login' : 'Admin Login'}
-            </h2>
-          </CardHeader>
-          <CardBody>
-            <form onSubmit={handleSubmit}>
-              {error && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2">
-                  <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
-                  <p className="text-sm text-red-800">{error}</p>
-                </div>
-              )}
-
-              <div className="space-y-4">
-                <Input
-                  label="Email Address"
-                  placeholder="your.email@example.com"
-                  name="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                  icon={User}
-                />
-
-                <Input
-                  label="Password"
-                  placeholder="••••••••"
-                  name="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
-                  icon={Lock}
-                  showPasswordToggle
-                  showPassword={showPassword}
-                  onPasswordToggle={() => setShowPassword(prev => !prev)}
-                />
-
-                <div className="flex items-center justify-between">
-                  <label className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      className="rounded text-primary-600"
-                    />
-                    <span className="text-sm text-gray-600">Remember me</span>
-                  </label>
-                  <Link to="/forgot-password" className="text-sm text-primary-600 hover:text-primary-700">
-                    Forgot password?
-                  </Link>
-                </div>
-
-                <Button
-                  type="submit"
-                  variant="primary"
-                  className="w-full"
-                  loading={loading}
-                >
-                  Sign In
-                </Button>
-              </div>
-            </form>
-
-            {/* Demo Credentials Notice */}
-            {userType === 'passenger' && (
-              <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <p className="text-xs text-blue-800">
-                  <strong>Demo:</strong> Use any email and password to test
-                </p>
-              </div>
-            )}
-          </CardBody>
-        </Card>
-
-        {/* Register Link */}
-        {userType === 'passenger' && (
-          <div className="mt-6 text-center">
-            <p className="text-gray-600">
-              Don't have an account?{' '}
-              <Link to="/register" className="text-primary-600 hover:text-primary-700 font-medium">
-                Sign up
-              </Link>
+          {/* heading */}
+          <div>
+            <h1 className="lp-card__title">
+              {isPassenger ? 'Welcome back' : 'Admin Portal'}
+            </h1>
+            <p className="lp-card__sub">
+              {isPassenger
+                ? 'Sign in to manage your journeys.'
+                : 'Restricted to authorised administrators.'}
             </p>
           </div>
-        )}
 
-        {/* Back to Home */}
-        <div className="mt-4 text-center">
-          <Link to="/" className="text-sm text-gray-600 hover:text-gray-900">
-            ← Back to Home
-          </Link>
+          {/* passenger / admin toggle */}
+          <div className="lp-toggle" role="group" aria-label="Account type">
+            {[
+              { value: 'passenger', label: 'Passenger' },
+              { value: 'admin',     label: 'Admin'     },
+            ].map(({ value, label }) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => { setUserType(value); setError(''); }}
+                className={`lp-toggle__btn${userType === value ? ' lp-toggle__btn--active' : ''}`}
+                aria-pressed={userType === value}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* form */}
+          <form onSubmit={handleSubmit} className="lp-form" noValidate>
+
+            {error && (
+              <div className="lp-error" role="alert">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            {/* email */}
+            <div className="lp-field">
+              <label htmlFor="lp-email" className="lp-field__label">Email address</label>
+              <div className="lp-field__wrap">
+                <Mail className="lp-field__icon" aria-hidden="true" />
+                <input
+                  id="lp-email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="you@example.com"
+                  className="lp-field__input"
+                />
+              </div>
+            </div>
+
+            {/* password */}
+            <div className="lp-field">
+              <div className="lp-field__label-row">
+                <label htmlFor="lp-password" className="lp-field__label">Password</label>
+                <Link to="/forgot-password" className="lp-field__forgot">Forgot password?</Link>
+              </div>
+              <div className="lp-field__wrap">
+                <Lock className="lp-field__icon" aria-hidden="true" />
+                <input
+                  id="lp-password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  required
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder="••••••••"
+                  className="lp-field__input lp-field__input--pw"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(p => !p)}
+                  className="lp-field__eye"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword
+                    ? <EyeOff className="w-4 h-4" aria-hidden="true" />
+                    : <Eye    className="w-4 h-4" aria-hidden="true" />}
+                </button>
+              </div>
+            </div>
+
+            {/* submit */}
+            <button type="submit" disabled={loading} className="lp-submit">
+              {loading ? (
+                <>
+                  <svg className="w-4 h-4 animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path   className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                  </svg>
+                  Signing in…
+                </>
+              ) : (
+                <>Sign In <ArrowRight className="w-4 h-4 flex-shrink-0" aria-hidden="true" /></>
+              )}
+            </button>
+
+          </form>
+
+          {/* register link */}
+          {isPassenger && (
+            <p className="lp-register">
+              Don't have an account?&nbsp;
+              <Link to="/register" className="lp-register__link">Create one</Link>
+            </p>
+          )}
+
+          {/* back to home */}
+          <p className="lp-back">
+            <Link to="/" className="lp-back__link">← Back to Home</Link>
+          </p>
+
         </div>
       </div>
+
     </div>
   );
 };

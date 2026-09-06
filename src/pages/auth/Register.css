@@ -1,0 +1,1036 @@
+/* =========================================================
+   SMARTSEAT REGISTER PAGE
+   Full-screen standalone authentication page
+   ========================================================= */
+
+.rp-root {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+
+  display: flex;
+
+  background:
+    url('../../assets/hero.png')
+    center center / cover
+    no-repeat;
+
+  background-color: #020817;
+}
+
+
+/* =========================================================
+   DARK HERO OVERLAY
+   ========================================================= */
+
+.rp-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+
+  background:
+    linear-gradient(
+      90deg,
+      rgba(2, 8, 23, 0.12) 0%,
+      rgba(2, 8, 23, 0.18) 32%,
+      rgba(2, 8, 23, 0.55) 58%,
+      rgba(2, 8, 23, 0.94) 100%
+    ),
+    linear-gradient(
+      to bottom,
+      rgba(2, 8, 23, 0.48) 0%,
+      rgba(2, 8, 23, 0.05) 22%,
+      rgba(2, 8, 23, 0.12) 70%,
+      rgba(2, 8, 23, 0.72) 100%
+    );
+}
+
+
+/* =========================================================
+   HEADER
+   Transparent overlay over hero
+   ========================================================= */
+
+.rp-header {
+  position: absolute;
+
+  top: 0;
+  left: 0;
+  right: 0;
+
+  height: 76px;
+
+  z-index: 20;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 0 5vw;
+
+  background: rgba(3, 12, 28, 0.42);
+
+  border-bottom:
+    1px solid rgba(103, 232, 249, 0.12);
+
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+
+/* =========================================================
+   BRAND
+   ========================================================= */
+
+.rp-brand {
+  display: flex;
+  align-items: center;
+
+  gap: 10px;
+
+  color: white;
+  text-decoration: none;
+}
+
+.rp-brand-icon {
+  width: 38px;
+  height: 38px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 11px;
+
+  color: white;
+
+  background:
+    linear-gradient(
+      135deg,
+      #06b6d4,
+      #14b8a6
+    );
+
+  box-shadow:
+    0 5px 18px
+    rgba(6, 182, 212, 0.35);
+}
+
+.rp-brand-text {
+  display: flex;
+  flex-direction: column;
+
+  line-height: 1;
+}
+
+.rp-brand-name {
+  font-size: 17px;
+  font-weight: 900;
+
+  letter-spacing: -0.03em;
+}
+
+.rp-brand-name span {
+  color: #22d3ee;
+}
+
+.rp-brand-text small {
+  margin-top: 4px;
+
+  font-size: 7px;
+  font-weight: 700;
+
+  color:
+    rgba(186, 230, 253, 0.55);
+
+  letter-spacing: 0.2em;
+}
+
+
+/* =========================================================
+   NAVIGATION
+   ========================================================= */
+
+.rp-nav {
+  display: flex;
+  align-items: center;
+
+  gap: 30px;
+}
+
+.rp-nav a {
+  color:
+    rgba(240, 249, 255, 0.9);
+
+  font-size: 13px;
+  font-weight: 700;
+
+  text-decoration: none;
+
+  transition:
+    color 0.2s ease;
+}
+
+.rp-nav a:hover {
+  color: #22d3ee;
+}
+
+
+/* =========================================================
+   HEADER LOGIN BUTTON
+   ========================================================= */
+
+.rp-login-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 10px 18px;
+
+  color: #e0f2fe;
+
+  font-size: 13px;
+  font-weight: 700;
+
+  text-decoration: none;
+
+  border-radius: 12px;
+
+  border:
+    1px solid
+    rgba(148, 163, 184, 0.28);
+
+  background:
+    rgba(15, 23, 42, 0.45);
+
+  transition:
+    all 0.2s ease;
+}
+
+.rp-login-button:hover {
+  border-color:
+    rgba(34, 211, 238, 0.5);
+
+  color: #22d3ee;
+
+  background:
+    rgba(6, 182, 212, 0.1);
+}
+
+
+/* =========================================================
+   MAIN CONTENT
+   ========================================================= */
+
+.rp-content {
+  position: relative;
+
+  z-index: 5;
+
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: flex-end;
+
+  padding:
+    100px
+    5vw
+    40px;
+}
+
+
+/* =========================================================
+   REGISTER CARD
+   ========================================================= */
+
+.rp-card {
+  width: min(470px, 100%);
+
+  max-height: calc(100vh - 115px);
+
+  overflow-y: auto;
+
+  padding: 30px 32px;
+
+  border-radius: 24px;
+
+  background:
+    rgba(3, 13, 29, 0.87);
+
+  border:
+    1px solid
+    rgba(34, 211, 238, 0.26);
+
+  box-shadow:
+    0 25px 70px
+    rgba(0, 0, 0, 0.58),
+
+    0 0 45px
+    rgba(6, 182, 212, 0.07);
+
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+}
+
+
+/* Scrollbar */
+
+.rp-card::-webkit-scrollbar {
+  width: 5px;
+}
+
+.rp-card::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.rp-card::-webkit-scrollbar-thumb {
+  background:
+    rgba(34, 211, 238, 0.25);
+
+  border-radius: 10px;
+}
+
+
+/* =========================================================
+   CARD HEADING
+   ========================================================= */
+
+.rp-card-heading {
+  margin-bottom: 22px;
+}
+
+.rp-card-logo {
+  display: flex;
+  align-items: center;
+
+  gap: 10px;
+
+  margin-bottom: 18px;
+}
+
+.rp-card-logo-icon {
+  width: 40px;
+  height: 40px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 11px;
+
+  color: white;
+
+  background:
+    linear-gradient(
+      135deg,
+      #06b6d4,
+      #14b8a6
+    );
+
+  box-shadow:
+    0 5px 18px
+    rgba(6, 182, 212, 0.32);
+}
+
+.rp-card-logo > span {
+  color: white;
+
+  font-size: 19px;
+  font-weight: 900;
+}
+
+.rp-card-logo > span span {
+  color: #22d3ee;
+}
+
+.rp-card-heading h1 {
+  margin: 0 0 6px;
+
+  color: #f0f9ff;
+
+  font-size: 27px;
+  font-weight: 800;
+
+  letter-spacing: -0.02em;
+}
+
+.rp-card-heading p {
+  margin: 0;
+
+  color:
+    rgba(186, 230, 253, 0.62);
+
+  font-size: 13px;
+}
+
+
+/* =========================================================
+   ERROR
+   ========================================================= */
+
+.rp-error {
+  display: flex;
+  align-items: flex-start;
+
+  gap: 8px;
+
+  margin-bottom: 17px;
+
+  padding: 10px 12px;
+
+  color: #fca5a5;
+
+  font-size: 12px;
+
+  border-radius: 10px;
+
+  background:
+    rgba(239, 68, 68, 0.10);
+
+  border:
+    1px solid
+    rgba(239, 68, 68, 0.25);
+}
+
+
+/* =========================================================
+   FORM
+   ========================================================= */
+
+.rp-form {
+  display: flex;
+  flex-direction: column;
+
+  gap: 14px;
+}
+
+.rp-field {
+  display: flex;
+  flex-direction: column;
+
+  gap: 6px;
+}
+
+.rp-field > label {
+  display: flex;
+  align-items: center;
+
+  color:
+    rgba(186, 230, 253, 0.75);
+
+  font-size: 10px;
+  font-weight: 800;
+
+  text-transform: uppercase;
+
+  letter-spacing: 0.08em;
+}
+
+.rp-optional {
+  margin-left: 6px;
+
+  color:
+    rgba(148, 163, 184, 0.42);
+
+  font-size: 8px;
+
+  text-transform: none;
+
+  letter-spacing: 0;
+}
+
+
+/* =========================================================
+   INPUT
+   ========================================================= */
+
+.rp-input-wrapper {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+}
+
+.rp-input-icon {
+  position: absolute;
+
+  left: 13px;
+
+  width: 16px;
+  height: 16px;
+
+  color:
+    rgba(34, 211, 238, 0.55);
+
+  pointer-events: none;
+
+  z-index: 2;
+}
+
+.rp-input {
+  width: 100%;
+
+  box-sizing: border-box;
+
+  padding:
+    11px
+    42px
+    11px
+    40px;
+
+  border-radius: 11px;
+
+  border:
+    1px solid
+    rgba(34, 211, 238, 0.15);
+
+  outline: none;
+
+  color: #e0f2fe;
+
+  font-size: 13px;
+
+  background:
+    rgba(255, 255, 255, 0.055);
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.rp-input:focus {
+  border-color:
+    rgba(34, 211, 238, 0.58);
+
+  background:
+    rgba(255, 255, 255, 0.07);
+
+  box-shadow:
+    0 0 0 3px
+    rgba(6, 182, 212, 0.09);
+}
+
+.rp-input::placeholder {
+  color:
+    rgba(148, 163, 184, 0.4);
+}
+
+.rp-input-error {
+  border-color:
+    rgba(248, 113, 113, 0.55);
+}
+
+
+/* =========================================================
+   PASSWORD
+   ========================================================= */
+
+.rp-password-input {
+  padding-right: 44px;
+}
+
+.rp-password-toggle {
+  position: absolute;
+
+  right: 11px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 28px;
+  height: 28px;
+
+  border: 0;
+
+  color:
+    rgba(34, 211, 238, 0.5);
+
+  background: transparent;
+
+  cursor: pointer;
+
+  border-radius: 7px;
+}
+
+.rp-password-toggle:hover {
+  color: #22d3ee;
+
+  background:
+    rgba(34, 211, 238, 0.08);
+}
+
+
+/* =========================================================
+   SELECT
+   ========================================================= */
+
+.rp-select-wrapper {
+  position: relative;
+}
+
+.rp-select {
+  width: 100%;
+
+  box-sizing: border-box;
+
+  padding: 11px 38px 11px 14px;
+
+  border-radius: 11px;
+
+  border:
+    1px solid
+    rgba(34, 211, 238, 0.15);
+
+  outline: none;
+
+  color: #e0f2fe;
+
+  font-size: 13px;
+
+  background:
+    rgba(255, 255, 255, 0.055);
+
+  cursor: pointer;
+
+  appearance: none;
+
+  background-image:
+    linear-gradient(
+      45deg,
+      transparent 50%,
+      #22d3ee 50%
+    ),
+    linear-gradient(
+      135deg,
+      #22d3ee 50%,
+      transparent 50%
+    );
+
+  background-position:
+    calc(100% - 17px) 50%,
+    calc(100% - 12px) 50%;
+
+  background-size:
+    5px 5px,
+    5px 5px;
+
+  background-repeat: no-repeat;
+}
+
+.rp-select:focus {
+  border-color:
+    rgba(34, 211, 238, 0.58);
+
+  box-shadow:
+    0 0 0 3px
+    rgba(6, 182, 212, 0.09);
+}
+
+.rp-select option {
+  color: #e0f2fe;
+
+  background: #0f1b2e;
+}
+
+
+/* =========================================================
+   HELPER / ERROR
+   ========================================================= */
+
+.rp-helper {
+  color:
+    rgba(148, 163, 184, 0.46);
+
+  font-size: 9px;
+}
+
+.rp-field-error {
+  color: #fca5a5;
+
+  font-size: 10px;
+}
+
+
+/* =========================================================
+   TERMS
+   ========================================================= */
+
+.rp-terms {
+  display: flex;
+  align-items: flex-start;
+
+  gap: 8px;
+
+  margin-top: 1px;
+
+  color:
+    rgba(148, 163, 184, 0.68);
+
+  font-size: 10px;
+
+  line-height: 1.5;
+
+  cursor: pointer;
+}
+
+.rp-terms input {
+  width: 14px;
+  height: 14px;
+
+  margin-top: 1px;
+
+  accent-color: #06b6d4;
+
+  flex-shrink: 0;
+
+  cursor: pointer;
+}
+
+.rp-terms a {
+  color: #22d3ee;
+
+  text-decoration: none;
+
+  font-weight: 700;
+}
+
+.rp-terms a:hover {
+  text-decoration: underline;
+}
+
+
+/* =========================================================
+   SUBMIT
+   ========================================================= */
+
+.rp-submit {
+  width: 100%;
+
+  min-height: 47px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 8px;
+
+  border: 0;
+
+  border-radius: 12px;
+
+  color: white;
+
+  font-size: 13px;
+  font-weight: 800;
+
+  background:
+    linear-gradient(
+      135deg,
+      #06b6d4,
+      #14b8a6
+    );
+
+  box-shadow:
+    0 8px 25px
+    rgba(6, 182, 212, 0.27);
+
+  cursor: pointer;
+
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.rp-submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+
+  box-shadow:
+    0 12px 30px
+    rgba(6, 182, 212, 0.34);
+}
+
+.rp-submit:disabled {
+  opacity: 0.55;
+
+  cursor: not-allowed;
+}
+
+
+/* Spinner */
+
+.rp-spinner {
+  width: 15px;
+  height: 15px;
+
+  border:
+    2px solid
+    rgba(255, 255, 255, 0.35);
+
+  border-top-color: white;
+
+  border-radius: 50%;
+
+  animation:
+    rp-spin 0.7s linear infinite;
+}
+
+@keyframes rp-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+
+/* =========================================================
+   LOGIN LINK
+   ========================================================= */
+
+.rp-login-text {
+  margin: 17px 0 0;
+
+  text-align: center;
+
+  color:
+    rgba(148, 163, 184, 0.68);
+
+  font-size: 11px;
+}
+
+.rp-login-text a {
+  margin-left: 4px;
+
+  color: #22d3ee;
+
+  font-weight: 700;
+
+  text-decoration: none;
+}
+
+.rp-login-text a:hover {
+  text-decoration: underline;
+}
+
+
+/* =========================================================
+   BACK HOME
+   ========================================================= */
+
+.rp-back {
+  display: block;
+
+  margin-top: 13px;
+
+  text-align: center;
+
+  color:
+    rgba(148, 163, 184, 0.42);
+
+  font-size: 10px;
+
+  text-decoration: none;
+}
+
+.rp-back:hover {
+  color:
+    rgba(186, 230, 253, 0.75);
+}
+
+
+/* =========================================================
+   SUCCESS SCREEN
+   ========================================================= */
+
+.rp-success-wrapper {
+  position: relative;
+
+  z-index: 5;
+
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  padding: 30px;
+}
+
+.rp-success-card {
+  width: min(430px, 100%);
+
+  padding: 42px 35px;
+
+  text-align: center;
+
+  border-radius: 24px;
+
+  background:
+    rgba(3, 13, 29, 0.88);
+
+  border:
+    1px solid
+    rgba(34, 211, 238, 0.25);
+
+  box-shadow:
+    0 25px 70px
+    rgba(0, 0, 0, 0.55);
+
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+}
+
+.rp-success-icon {
+  width: 68px;
+  height: 68px;
+
+  margin: 0 auto 18px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: #22d3ee;
+
+  border-radius: 50%;
+
+  background:
+    rgba(34, 211, 238, 0.12);
+
+  box-shadow:
+    0 0 30px
+    rgba(34, 211, 238, 0.12);
+}
+
+.rp-success-card h1 {
+  margin: 0 0 8px;
+
+  color: #f0f9ff;
+
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.rp-success-card p {
+  margin: 0 0 12px;
+
+  color:
+    rgba(186, 230, 253, 0.65);
+
+  font-size: 13px;
+}
+
+.rp-success-card > span {
+  color:
+    rgba(148, 163, 184, 0.48);
+
+  font-size: 11px;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 950px) {
+
+  .rp-nav {
+    display: none;
+  }
+
+  .rp-content {
+    justify-content: center;
+
+    padding:
+      95px
+      20px
+      30px;
+  }
+
+  .rp-card {
+    width: min(470px, 100%);
+  }
+
+  .rp-root {
+    background-position: 35% center;
+  }
+}
+
+
+@media (max-width: 600px) {
+
+  .rp-header {
+    height: 68px;
+
+    padding:
+      0 18px;
+
+    background:
+      rgba(3, 12, 28, 0.55);
+  }
+
+  .rp-brand-icon {
+    width: 34px;
+    height: 34px;
+  }
+
+  .rp-brand-name {
+    font-size: 15px;
+  }
+
+  .rp-login-button {
+    padding: 8px 13px;
+
+    font-size: 11px;
+  }
+
+  .rp-content {
+    min-height: 100dvh;
+
+    padding:
+      82px
+      14px
+      20px;
+  }
+
+  .rp-card {
+    width: 100%;
+
+    max-height:
+      calc(100dvh - 95px);
+
+    padding:
+      25px 20px;
+
+    border-radius: 20px;
+  }
+
+  .rp-card-heading h1 {
+    font-size: 23px;
+  }
+
+  .rp-form {
+    gap: 13px;
+  }
+
+  .rp-root {
+    background:
+      linear-gradient(
+        rgba(3, 12, 28, 0.82),
+        rgba(3, 12, 28, 0.95)
+      ),
+      url('../../assets/hero.png')
+      center / cover
+      no-repeat;
+  }
+}

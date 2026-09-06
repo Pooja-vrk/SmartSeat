@@ -25,6 +25,7 @@ const SeatSelection = ({
   busId,
   seatLayout = [],
   selectedSeat,
+  selectedSeats,          // array — used when passengerCount > 1
   onSeatSelect,
   onSeatDeselect,
   monitoredSeat = null,
@@ -54,6 +55,9 @@ const SeatSelection = ({
     if (backend === 'booked') return 'booked';
     if (backend === 'reserved') return 'reserved';
     if (backend === 'unavailable') return 'unavailable';
+    // Multi-seat mode: check selectedSeats array
+    if (Array.isArray(selectedSeats) && selectedSeats.includes(seat.seatNumber)) return 'selected';
+    // Single-seat mode: check selectedSeat string
     if (selectedSeat === seat.seatNumber) return 'selected';
     if (monitoredSeat === seat.seatNumber) return 'monitored';
     if (recommendedSeats.includes(seat.seatNumber)) return 'recommended';
@@ -73,13 +77,17 @@ const SeatSelection = ({
       return;
     }
 
-    if (!['available', 'recommended', 'monitored'].includes(status)) return;
+    if (!['available', 'recommended', 'monitored', 'selected'].includes(status)) return;
 
-    setActivePopoverSeat(seat);
-    if (selectedSeat === seat.seatNumber) {
-      onSeatDeselect?.();
+    setActivePopoverSeat(null);
+
+    // If the seat is already selected, deselect it
+    if (status === 'selected') {
+      // In multi mode pass the seat number; in single mode pass nothing
+      onSeatDeselect?.(seat.seatNumber);
       return;
     }
+
     onSeatSelect?.(seat);
   };
 
@@ -367,6 +375,23 @@ const SeatSelection = ({
   // ─── ROW RENDERERS ────────────────────────────
   // ──────────────────────────────────────────────
 
+  // ──────────────────────────────────────────────
+  // Helper: resolve position/berth from column when DB fields are null
+  // (handles legacy data that pre-dates berth field)
+  // ──────────────────────────────────────────────
+
+  const resolvePosition = (seat) => {
+    if (seat.position === 'left' || seat.position === 'right') return seat.position;
+    // column 1,2 → left;  column 3,4 → right
+    return Number(seat.column) <= 2 ? 'left' : 'right';
+  };
+
+  const resolveBerth = (seat) => {
+    if (seat.berth === 'lower' || seat.berth === 'upper') return seat.berth;
+    // column 1,3 → lower;  column 2,4 → upper
+    return Number(seat.column) % 2 === 1 ? 'lower' : 'upper';
+  };
+
   const renderSeaterRow = (rowNumber) => {
     const rowSeats = seatLayout
       .filter((s) => Number(s.row) === Number(rowNumber))
@@ -374,8 +399,9 @@ const SeatSelection = ({
 
     return (
       <div key={rowNumber} className="flex items-center justify-center gap-1 sm:gap-2 mb-2 sm:mb-3">
+        {/* Row number — meaningful for seater passengers */}
         <div className="w-5 sm:w-7 text-[10px] sm:text-xs font-mono font-bold text-slate-500 text-right flex-shrink-0">
-          R{String(rowNumber).padStart(2, '0')}
+          {String(rowNumber).padStart(2, '0')}
         </div>
         <div className="w-1.5 h-10 bg-slate-700/60 rounded-full border-r border-cyan-500/30 flex-shrink-0" title="Window" />
         <div className="flex items-center gap-1 sm:gap-2">
@@ -397,7 +423,7 @@ const SeatSelection = ({
         </div>
         <div className="w-1.5 h-10 bg-slate-700/60 rounded-full border-l border-cyan-500/30 flex-shrink-0" title="Window" />
         <div className="w-5 sm:w-7 text-[10px] sm:text-xs font-mono font-bold text-slate-500 flex-shrink-0">
-          R{String(rowNumber).padStart(2, '0')}
+          {String(rowNumber).padStart(2, '0')}
         </div>
       </div>
     );
@@ -408,40 +434,39 @@ const SeatSelection = ({
       .filter((s) => Number(s.row) === Number(rowNumber))
       .sort((a, b) => Number(a.column) - Number(b.column));
 
-    // Group: left side (col 1,2) = lower,upper | right side (col 3,4) = lower,upper
-    const leftLower = rowSeats.find((s) => s.position === 'left' && s.berth === 'lower');
-    const leftUpper = rowSeats.find((s) => s.position === 'left' && s.berth === 'upper');
-    const rightLower = rowSeats.find((s) => s.position === 'right' && s.berth === 'lower');
-    const rightUpper = rowSeats.find((s) => s.position === 'right' && s.berth === 'upper');
+    // Use position+berth from DB, with column-based fallback for legacy data
+    const leftLower  = rowSeats.find((s) => resolvePosition(s) === 'left'  && resolveBerth(s) === 'lower');
+    const leftUpper  = rowSeats.find((s) => resolvePosition(s) === 'left'  && resolveBerth(s) === 'upper');
+    const rightLower = rowSeats.find((s) => resolvePosition(s) === 'right' && resolveBerth(s) === 'lower');
+    const rightUpper = rowSeats.find((s) => resolvePosition(s) === 'right' && resolveBerth(s) === 'upper');
+
+    // Nothing to render for this row
+    if (!leftLower && !leftUpper && !rightLower && !rightUpper) return null;
 
     return (
-      <div key={rowNumber} className="flex items-center justify-center gap-2 mb-3">
-        {/* Row label */}
-        <div className="w-7 text-[10px] font-mono font-bold text-slate-500 text-right flex-shrink-0">
-          R{String(rowNumber).padStart(2, '0')}
+      <div key={rowNumber} className="flex items-start justify-center gap-3 sm:gap-5 mb-4">
+
+        {/* LEFT SIDE — lower + upper stacked */}
+        <div className="flex flex-col gap-1.5 items-center">
+          <span className="text-[8px] font-mono font-bold text-slate-600 uppercase tracking-wider mb-0.5">LEFT</span>
+          {leftLower && renderSleeperBerth({ ...leftLower, berth: resolveBerth(leftLower) })}
+          {leftUpper && renderSleeperBerth({ ...leftUpper, berth: resolveBerth(leftUpper) })}
         </div>
 
-        {/* Left berth stack */}
-        <div className="flex flex-col gap-1">
-          {leftLower && renderSleeperBerth(leftLower)}
-          {leftUpper && renderSleeperBerth(leftUpper)}
+        {/* Aisle divider */}
+        <div className="flex flex-col items-center self-stretch pt-5">
+          <div className="flex-1 w-px bg-cyan-500/20" />
+          <span className="text-[7px] font-mono text-slate-600 uppercase tracking-widest my-1 opacity-70">AISLE</span>
+          <div className="flex-1 w-px bg-cyan-500/20" />
         </div>
 
-        {/* Aisle */}
-        <div className="w-8 sm:w-12 h-full flex items-center justify-center flex-shrink-0">
-          <div className="w-px h-16 bg-cyan-500/20" />
-          <span className="text-[7px] font-mono text-slate-600 uppercase tracking-widest rotate-90 opacity-60 absolute">AISLE</span>
+        {/* RIGHT SIDE — lower + upper stacked */}
+        <div className="flex flex-col gap-1.5 items-center">
+          <span className="text-[8px] font-mono font-bold text-slate-600 uppercase tracking-wider mb-0.5">RIGHT</span>
+          {rightLower && renderSleeperBerth({ ...rightLower, berth: resolveBerth(rightLower) })}
+          {rightUpper && renderSleeperBerth({ ...rightUpper, berth: resolveBerth(rightUpper) })}
         </div>
 
-        {/* Right berth stack */}
-        <div className="flex flex-col gap-1">
-          {rightLower && renderSleeperBerth(rightLower)}
-          {rightUpper && renderSleeperBerth(rightUpper)}
-        </div>
-
-        <div className="w-7 text-[10px] font-mono font-bold text-slate-500 flex-shrink-0">
-          R{String(rowNumber).padStart(2, '0')}
-        </div>
       </div>
     );
   };
@@ -451,13 +476,14 @@ const SeatSelection = ({
       .filter((s) => Number(s.row) === Number(rowNumber))
       .sort((a, b) => Number(a.column) - Number(b.column));
 
-    const leftSeats = rowSeats.filter((s) => s.position === 'left');
-    const rightSeats = rowSeats.filter((s) => s.position === 'right');
+    // Use position from DB, fallback to column-based grouping
+    const leftSeats  = rowSeats.filter((s) => resolvePosition(s) === 'left');
+    const rightSeats = rowSeats.filter((s) => resolvePosition(s) === 'right');
 
     return (
       <div key={rowNumber} className="flex items-center justify-center gap-1 sm:gap-2 mb-3">
         <div className="w-5 sm:w-7 text-[10px] sm:text-xs font-mono font-bold text-slate-500 text-right flex-shrink-0">
-          R{String(rowNumber).padStart(2, '0')}
+          {String(rowNumber).padStart(2, '0')}
         </div>
         <div className="w-1.5 h-12 bg-slate-700/60 rounded-full border-r border-cyan-500/30 flex-shrink-0" />
 
@@ -472,14 +498,14 @@ const SeatSelection = ({
           <span className="text-[7px] font-mono text-slate-600 uppercase tracking-widest rotate-90 opacity-60 absolute">AISLE</span>
         </div>
 
-        {/* Right recliners (1 seat) */}
+        {/* Right recliner (1 seat) */}
         <div className="flex items-center gap-1">
           {rightSeats.map((seat) => renderRecliner(seat))}
         </div>
 
         <div className="w-1.5 h-12 bg-slate-700/60 rounded-full border-l border-cyan-500/30 flex-shrink-0" />
         <div className="w-5 sm:w-7 text-[10px] sm:text-xs font-mono font-bold text-slate-500 flex-shrink-0">
-          R{String(rowNumber).padStart(2, '0')}
+          {String(rowNumber).padStart(2, '0')}
         </div>
       </div>
     );

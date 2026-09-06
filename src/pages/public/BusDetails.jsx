@@ -8,7 +8,8 @@ import {
 import {
   Link,
   useNavigate,
-  useParams
+  useParams,
+  useSearchParams
 } from 'react-router-dom';
 
 import {
@@ -45,6 +46,7 @@ import {
 
 const BusDetails = () => {
   const { id } = useParams();
+  const [busDetailsSearchParams] = useSearchParams();
 
   const navigate =
     useNavigate();
@@ -398,8 +400,13 @@ const BusDetails = () => {
           ''
       });
 
+      const passengers = busDetailsSearchParams.get('passengers');
+      const passengersParam = passengers && Number(passengers) > 1
+        ? `?passengers=${passengers}`
+        : '';
+
       navigate(
-        `/booking/${busId}/${scheduleId}/seats`
+        `/booking/${busId}/${scheduleId}/seats${passengersParam}`
       );
     };
 

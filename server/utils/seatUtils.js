@@ -16,18 +16,29 @@ const isSleeper = (busType = '') =>
 const isSemiSleeper = (busType = '') =>
   /semi[\s-]?sleeper/i.test(busType);
 
+/**
+ * Passenger-facing sleeper berth number.
+ * Row 1: L01 / U01 (left), L02 / U02 (right)
+ * Row 2: L03 / U03 (left), L04 / U04 (right)
+ */
+const sleeperSeatNumber = (row, position, berth) => {
+  const n = (Number(row) - 1) * 2 + (position === 'right' ? 2 : 1);
+  const pad = String(n).padStart(2, '0');
+  return `${berth === 'upper' ? 'U' : 'L'}${pad}`;
+};
+
+const sleeperAdjacentNumber = (row, position, berth) =>
+  sleeperSeatNumber(row, position, berth === 'upper' ? 'lower' : 'upper');
+
 // ============================================================
 // SLEEPER LAYOUT GENERATOR
 //
 // Layout: upper + lower berths on each side of a central aisle.
 // Each row produces 4 seat records:
-//   col 1 = left-lower  (e.g. 01L)
-//   col 2 = left-upper  (e.g. 01U)
-//   col 3 = right-lower (e.g. 01RL)   mapped internally as col 3 / col 4
-//   col 4 = right-upper (e.g. 01RU)
-//
-// seatNumber format: {ROW_PADDED}{L|U} for left side,
-//                    {ROW_PADDED}R{L|U} for right side.
+//   col 1 = left-lower  (L01, L03, ...)
+//   col 2 = left-upper  (U01, U03, ...)
+//   col 3 = right-lower (L02, L04, ...)
+//   col 4 = right-upper (U02, U04, ...)
 // ============================================================
 
 const generateSleeperLayout = async (busId, scheduleId, seatConfig, baseFare) => {
@@ -35,71 +46,134 @@ const generateSleeperLayout = async (busId, scheduleId, seatConfig, baseFare) =>
   const seats = [];
 
   for (let row = 1; row <= rows; row++) {
-    const rowPad = String(row).padStart(2, '0');
+    const leftLower = sleeperSeatNumber(row, 'left', 'lower');
+    const leftUpper = sleeperSeatNumber(row, 'left', 'upper');
+    const rightLower = sleeperSeatNumber(row, 'right', 'lower');
+    const rightUpper = sleeperSeatNumber(row, 'right', 'upper');
 
-    // Left Lower
     seats.push({
       scheduleId,
       busId,
-      seatNumber: `${rowPad}LL`,
+      seatNumber: leftLower,
       row,
       column: 1,
       seatType: 'window',
       position: 'left',
       berth: 'lower',
       status: 'available',
-      adjacentSeatNumbers: [`${rowPad}LU`],
+      adjacentSeatNumbers: [leftUpper],
       price: baseFare
     });
 
-    // Left Upper
     seats.push({
       scheduleId,
       busId,
-      seatNumber: `${rowPad}LU`,
+      seatNumber: leftUpper,
       row,
       column: 2,
       seatType: 'aisle',
       position: 'left',
       berth: 'upper',
       status: 'available',
-      adjacentSeatNumbers: [`${rowPad}LL`],
-      price: baseFare + 50   // upper berth slight premium
+      adjacentSeatNumbers: [leftLower],
+      price: baseFare + 50
     });
 
-    // Right Lower
     seats.push({
       scheduleId,
       busId,
-      seatNumber: `${rowPad}RL`,
+      seatNumber: rightLower,
       row,
       column: 3,
       seatType: 'window',
       position: 'right',
       berth: 'lower',
       status: 'available',
-      adjacentSeatNumbers: [`${rowPad}RU`],
+      adjacentSeatNumbers: [rightUpper],
       price: baseFare
     });
 
-    // Right Upper
     seats.push({
       scheduleId,
       busId,
-      seatNumber: `${rowPad}RU`,
+      seatNumber: rightUpper,
       row,
       column: 4,
       seatType: 'aisle',
       position: 'right',
       berth: 'upper',
       status: 'available',
-      adjacentSeatNumbers: [`${rowPad}RL`],
+      adjacentSeatNumbers: [rightLower],
       price: baseFare + 50
     });
   }
 
   await Seat.insertMany(seats);
   return seats;
+};
+
+/**
+ * Idempotent migration: rewrite legacy sleeper labels (01LL / 01RU)
+ * to passenger berth numbers (L01 / U01) without dropping collections.
+ * Also updates bookings and seat-change history that still store old labels.
+ */
+const migrateSleeperSeatNumbers = async () => {
+  const Booking = require('../models/Booking');
+  const SeatChangeHistory = require('../models/SeatChangeHistory');
+
+  const sleeperSeats = await Seat.find({
+    berth: { $in: ['lower', 'upper'] }
+  });
+
+  let updatedSeats = 0;
+
+  for (const seat of sleeperSeats) {
+    if (!seat.berth || !seat.position || !seat.row) continue;
+
+    const nextNumber = sleeperSeatNumber(seat.row, seat.position, seat.berth);
+    const nextAdjacent = sleeperAdjacentNumber(seat.row, seat.position, seat.berth);
+
+    if (seat.seatNumber === nextNumber &&
+        Array.isArray(seat.adjacentSeatNumbers) &&
+        seat.adjacentSeatNumbers[0] === nextAdjacent) {
+      continue;
+    }
+
+    const oldNumber = seat.seatNumber;
+
+    await Seat.updateOne(
+      { _id: seat._id },
+      {
+        $set: {
+          seatNumber: nextNumber,
+          adjacentSeatNumbers: [nextAdjacent]
+        }
+      }
+    );
+
+    if (oldNumber && oldNumber !== nextNumber) {
+      await Booking.updateMany(
+        { scheduleId: seat.scheduleId, seatNumber: oldNumber },
+        { $set: { seatNumber: nextNumber } }
+      );
+      await SeatChangeHistory.updateMany(
+        { scheduleId: seat.scheduleId, oldSeat: oldNumber },
+        { $set: { oldSeat: nextNumber } }
+      );
+      await SeatChangeHistory.updateMany(
+        { scheduleId: seat.scheduleId, newSeat: oldNumber },
+        { $set: { newSeat: nextNumber } }
+      );
+    }
+
+    updatedSeats += 1;
+  }
+
+  if (updatedSeats > 0) {
+    console.log(`Migrated ${updatedSeats} sleeper berth labels to L/U numbering`);
+  }
+
+  return updatedSeats;
 };
 
 // ============================================================
@@ -250,6 +324,13 @@ const findAdjacentPassenger = async (scheduleId, seatNumber) => {
       seat = await Seat.findOne({ scheduleId, seatNumber: padded });
     }
   }
+  if (!seat) {
+    const berthMatch = String(seatNumber).match(/^([LU])(\d+)$/i);
+    if (berthMatch) {
+      const padded = `${berthMatch[1].toUpperCase()}${berthMatch[2].padStart(2, '0')}`;
+      seat = await Seat.findOne({ scheduleId, seatNumber: padded });
+    }
+  }
   if (!seat) return null;
 
   const numbersToCheck = [];
@@ -323,5 +404,7 @@ module.exports = {
   releaseExpiredReservations,
   getAvailableSeats,
   isSleeper,
-  isSemiSleeper
+  isSemiSleeper,
+  sleeperSeatNumber,
+  migrateSleeperSeatNumbers
 };

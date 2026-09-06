@@ -4,11 +4,34 @@ const Schedule = require('../models/Schedule');
 const Bus = require('../models/Bus');
 const User = require('../models/User');
 const SeatChangeHistory = require('../models/SeatChangeHistory');
+const mongoose = require('mongoose');
 const smartSeatService = require('./smartSeatService');
 const recommendationService = require('./recommendationService');
 const { getAvailableSeats } = require('../utils/seatUtils');
 const { GST_RATE } = require('../config/gst');
 const { calculateRefund } = require('../config/cancellationPolicy');
+
+const seatNumberVariants = (seatNumber) => {
+  const raw = String(seatNumber || '').trim();
+  const variants = new Set([raw]);
+  if (!raw) return [...variants];
+
+  const seater = raw.match(/^(\d+)([A-Z]{1,3})$/i);
+  if (seater) {
+    const letters = seater[2].toUpperCase();
+    variants.add(`${seater[1].padStart(2, '0')}${letters}`);
+    variants.add(`${parseInt(seater[1], 10)}${letters}`);
+  }
+
+  const berth = raw.match(/^([LU])(\d+)$/i);
+  if (berth) {
+    const letter = berth[1].toUpperCase();
+    variants.add(`${letter}${berth[2].padStart(2, '0')}`);
+    variants.add(`${letter}${parseInt(berth[2], 10)}`);
+  }
+
+  return [...variants];
+};
 
 /**
  * Calculate GST breakdown for a given base fare.
@@ -379,13 +402,11 @@ class BookingService {
     try {
       session.startTransaction();
 
-      // Find booking by either MongoDB _id or custom bookingId
-      const booking = await Booking.findOne({ 
-        $or: [
-          { _id: bookingId },
-          { bookingId: bookingId }
-        ]
-      }).session(session);
+      const bookingQuery = mongoose.isValidObjectId(bookingId)
+        ? { $or: [{ _id: bookingId }, { bookingId }] }
+        : { bookingId };
+
+      const booking = await Booking.findOne(bookingQuery).session(session);
       
       if (!booking) {
         throw new Error('Booking not found');
@@ -401,13 +422,10 @@ class BookingService {
       }
 
       const oldSeatNumber = booking.seatNumber;
+      const targetSeatNumbers = seatNumberVariants(newSeatNumber);
 
-      // Prepare normalized target seat numbers (both padded and unpadded)
-      const targetSeatNumbers = [newSeatNumber];
-      const match = newSeatNumber.match(/^(\d+)([A-Z])$/i);
-      if (match) {
-        targetSeatNumbers.push(`${match[1].padStart(2, '0')}${match[2].toUpperCase()}`);
-        targetSeatNumbers.push(`${match[1]}${match[2].toUpperCase()}`);
+      if (seatNumberVariants(oldSeatNumber).some((n) => targetSeatNumbers.includes(n))) {
+        throw new Error('Please select a different seat');
       }
 
       // Atomic reservation of new seat
@@ -428,28 +446,23 @@ class BookingService {
             reservedUntil: new Date(Date.now() + 15 * 60 * 1000)
           }
         },
-        { session }
+        { session, new: true }
       );
 
       if (!newSeat) {
         throw new Error('Seat is not available or already booked');
       }
 
-      // Prepare normalized old seat numbers
-      const oldSeatNumbers = [oldSeatNumber];
-      const oldMatch = oldSeatNumber.match(/^(\d+)([A-Z])$/i);
-      if (oldMatch) {
-        oldSeatNumbers.push(`${oldMatch[1].padStart(2, '0')}${oldMatch[2].toUpperCase()}`);
-        oldSeatNumbers.push(`${oldMatch[1]}${oldMatch[2].toUpperCase()}`);
-      }
+      const oldSeatNumbers = seatNumberVariants(oldSeatNumber);
 
-      // Release old seat
-      await Seat.findOneAndUpdate(
+      // Release only this booking's previous seat — never another passenger's
+      const released = await Seat.findOneAndUpdate(
         {
+          _id: { $ne: newSeat._id },
           scheduleId: booking.scheduleId,
           $or: [
             { bookingId: booking._id },
-            { seatNumber: { $in: oldSeatNumbers } }
+            { seatNumber: { $in: oldSeatNumbers }, bookedBy: userId }
           ]
         },
         {
@@ -464,11 +477,14 @@ class BookingService {
         { session }
       );
 
-      // Update booking with new seat
-      booking.seatNumber = newSeatNumber;
+      if (!released) {
+        throw new Error('Could not release the current seat. Seat change aborted.');
+      }
+
+      const authoritativeSeatNumber = newSeat.seatNumber;
+      booking.seatNumber = authoritativeSeatNumber;
       await booking.save({ session });
 
-      // Update new seat with booking reference
       await Seat.findByIdAndUpdate(
         newSeat._id,
         {
@@ -481,30 +497,38 @@ class BookingService {
         { session }
       );
 
-      // Record seat change history
       await SeatChangeHistory.create([{
         userId,
         bookingId: booking._id,
         scheduleId: booking.scheduleId,
         oldSeat: oldSeatNumber,
-        newSeat: newSeatNumber,
+        newSeat: authoritativeSeatNumber,
         reason: 'passenger_requested',
         triggeredBy: 'user'
       }], { session });
 
       await session.commitTransaction();
 
-      // Handle SmartSeat notification for the change
       try {
-        await smartSeatService.handleAdjacentSeatChange(booking.scheduleId, newSeatNumber, booking._id);
+        await smartSeatService.handleAdjacentSeatChange(
+          booking.scheduleId,
+          authoritativeSeatNumber,
+          booking._id
+        );
       } catch (smartSeatError) {
         console.error('SmartSeat notification error:', smartSeatError);
       }
 
+      const refreshed = await Booking.findById(booking._id)
+        .populate('scheduleId')
+        .populate('busId')
+        .populate('routeId')
+        .populate('userId', 'name email phone');
+
       return {
         success: true,
         data: {
-          ...booking.toObject(),
+          ...(refreshed ? refreshed.toObject() : booking.toObject()),
           previousSeat: oldSeatNumber,
           seatChangedAt: new Date()
         }

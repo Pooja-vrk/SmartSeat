@@ -40,18 +40,28 @@ const Search = () => {
 
   useEffect(() => {
     const searchBuses = async () => {
+      // Don't run the search when there are no params yet
+      const from = searchParams.get('from') || '';
+      const to   = searchParams.get('to')   || '';
+      const date = searchParams.get('date') || '';
+
+      if (!from && !to && !date) {
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
-      const params = {
-        from: searchParams.get('from') || '',
-        to: searchParams.get('to') || '',
-        date: searchParams.get('date') || ''
-      };
+      setBuses([]);
+      setFilteredBuses([]);
+      const params = { from, to, date };
 
       try {
         const response = await busService.searchBuses(params);
         if (response.success) {
           setBuses(response.data);
           setFilteredBuses(response.data);
+        } else {
+          console.error('Search failed:', response.message);
         }
       } catch (error) {
         console.error('Error searching buses:', error);
@@ -118,6 +128,41 @@ const Search = () => {
     return duration || 'N/A';
   };
 
+  // ──────────────────────────────────────────────────────────
+  // NO SEARCH CRITERIA — user navigated directly to /search
+  // without from/to/date params (e.g. from the navbar link).
+  // Show a helpful prompt instead of "0 buses available".
+  // ──────────────────────────────────────────────────────────
+  const hasSearchCriteria =
+    searchParams.get('from') ||
+    searchParams.get('to')   ||
+    searchParams.get('date');
+
+  if (!loading && !hasSearchCriteria) {
+    return (
+      <div className="search-page-container min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-white rounded-3xl p-12 border border-slate-200 text-center shadow-sm">
+            <Compass className="w-16 h-16 mx-auto mb-4 text-cyan-500" />
+            <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight mb-2">
+              Plan Your Journey
+            </h2>
+            <p className="text-slate-500 text-sm mb-6 max-w-md mx-auto">
+              Select a departure city, destination, and date on the home page to find available buses.
+            </p>
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 text-white font-bold text-sm uppercase tracking-wider shadow-md"
+            >
+              <ArrowRight className="w-4 h-4" />
+              Go to Home Search
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="search-page-container min-h-screen py-8 px-4">
@@ -164,6 +209,11 @@ const Search = () => {
               <span className="px-3 py-1 bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 rounded-full text-xs font-bold font-mono uppercase">
                 {filteredBuses.length} Buses Available
               </span>
+              {searchParams.get('passengers') && Number(searchParams.get('passengers')) > 1 && (
+                <span className="px-3 py-1 bg-slate-800 text-slate-300 border border-slate-700 rounded-full text-xs font-mono">
+                  {searchParams.get('passengers')} passengers
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -314,22 +364,35 @@ const Search = () => {
               <div className="bg-white rounded-3xl p-12 border border-slate-200 text-center shadow-sm">
                 <Bus className="w-14 h-14 mx-auto mb-4 text-slate-300" />
                 <h3 className="text-lg font-bold text-slate-800 uppercase tracking-wider">No buses found</h3>
-                <p className="text-xs text-slate-500 mt-1">No schedules match your selected criteria.</p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setFilters({
-                    busType: [],
-                    acType: '',
-                    seatType: '',
-                    minPrice: '',
-                    maxPrice: '',
-                    minSeats: ''
-                  })}
-                  className="mt-4 text-xs font-bold uppercase tracking-wider"
-                >
-                  Clear Filters
-                </Button>
+                <p className="text-xs text-slate-500 mt-1">
+                  {buses.length > 0
+                    ? 'No schedules match your current filters. Try clearing the filters.'
+                    : `No buses found for ${searchParams.get('from') || '?'} → ${searchParams.get('to') || '?'} on ${searchParams.get('date') || 'this date'}.`}
+                </p>
+                {buses.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setFilters({
+                      busType: [],
+                      acType: '',
+                      seatType: '',
+                      minPrice: '',
+                      maxPrice: '',
+                      minSeats: ''
+                    })}
+                    className="mt-4 text-xs font-bold uppercase tracking-wider"
+                  >
+                    Clear Filters
+                  </Button>
+                )}
+                {buses.length === 0 && (
+                  <Link to="/" className="inline-block mt-4">
+                    <Button variant="outline" size="sm" className="text-xs font-bold uppercase tracking-wider">
+                      Search Again
+                    </Button>
+                  </Link>
+                )}
               </div>
             ) : (
               filteredBuses.map(bus => (
@@ -412,7 +475,7 @@ const Search = () => {
                         <span>{bus.availableSeats} seats left</span>
                       </div>
 
-                      <Link to={`/bus/${bus.scheduleId}`}>
+                      <Link to={`/bus/${bus.scheduleId}${searchParams.get('passengers') && Number(searchParams.get('passengers')) > 1 ? `?passengers=${searchParams.get('passengers')}` : ''}`}>
                         <Button 
                           variant="primary" 
                           size="sm" 
