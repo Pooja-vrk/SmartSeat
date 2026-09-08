@@ -2188,3 +2188,324 @@ exports.getBusesWithScheduleStatus = asyncHandler(async (req, res, next) => {
       .filter(Boolean)
   });
 });
+
+/*
+|--------------------------------------------------------------------------
+| SEND NOTIFICATION  (admin → passengers)
+|--------------------------------------------------------------------------
+|
+| POST /api/admin/notifications
+|
+| Supports types: delay | booking | smartseat | payment | system
+|
+| For 'delay' type the admin selects a scheduleId; the handler finds all
+| confirmed/pending bookings on that schedule and creates one notification
+| per affected passenger (with deduplication).
+|
+| For all other types the admin specifies a target:
+|   'all'         → every user in the DB
+|   'user:<id>'   → a single user by _id (string prefixed with "user:")
+|
+*/
+
+exports.sendNotification = asyncHandler(async (req, res, next) => {
+  const {
+    type,         // 'delay' | 'booking' | 'smartseat' | 'payment' | 'system'
+    title,
+    message,
+    target,       // 'all' | 'user:<userId>'  (ignored for type=delay)
+    scheduleId,   // required when type === 'delay'
+    delayMinutes  // required when type === 'delay'
+  } = req.body;
+
+  /* ── Basic validation ────────────────────────────────────────────────── */
+  const ALLOWED_TYPES = ['delay', 'booking', 'smartseat', 'payment', 'system'];
+  if (!type || !ALLOWED_TYPES.includes(type)) {
+    return res.status(400).json({
+      success: false,
+      message: `type must be one of: ${ALLOWED_TYPES.join(', ')}`
+    });
+  }
+
+  if (!title || !String(title).trim()) {
+    return res.status(400).json({ success: false, message: 'title is required' });
+  }
+
+  if (!message || !String(message).trim()) {
+    return res.status(400).json({ success: false, message: 'message is required' });
+  }
+
+  /* ── Category mapping ────────────────────────────────────────────────── */
+  const categoryMap = {
+    delay:     'Delay',
+    booking:   'Booking',
+    smartseat: 'SmartSeat',
+    payment:   'Payment',
+    system:    'System'
+  };
+  const category = categoryMap[type];
+
+  /* ════════════════════════════════════════════════════════════════════════
+   *  DELAY ALERT
+   * ════════════════════════════════════════════════════════════════════════ */
+  if (type === 'delay') {
+    if (!scheduleId) {
+      return res.status(400).json({ success: false, message: 'scheduleId is required for delay notifications' });
+    }
+
+    const parsedDelay = Number(delayMinutes);
+    if (isNaN(parsedDelay) || parsedDelay < 0 || !Number.isFinite(parsedDelay)) {
+      return res.status(400).json({ success: false, message: 'delayMinutes must be a non-negative number' });
+    }
+
+    /* Find schedule with bus + route info */
+    const schedule = await Schedule.findById(scheduleId)
+      .populate('busId', 'busNumber operatorName')
+      .populate('routeId', 'source destination');
+
+    if (!schedule) {
+      return res.status(404).json({ success: false, message: 'Schedule not found' });
+    }
+
+    /* Update delay on schedule record */
+    schedule.delayMinutes = parsedDelay;
+    await schedule.save();
+
+    /* Clear-delay shortcut */
+    if (parsedDelay === 0) {
+      return res.status(200).json({
+        success: true,
+        message: 'Schedule delay cleared – no notifications sent',
+        data: { scheduleId, delayMinutes: 0, notified: 0 }
+      });
+    }
+
+    /* Find active bookings for this schedule ONLY */
+    const affectedBookings = await Booking.find({
+      scheduleId,
+      bookingStatus: { $in: ['confirmed', 'pending'] }
+    })
+      .select('userId bookingId seatNumber')
+      .lean();
+
+    if (affectedBookings.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: 'Delay recorded. No passengers to notify.',
+        data: { scheduleId, delayMinutes: parsedDelay, notified: 0 }
+      });
+    }
+
+    const from       = schedule.routeId?.source      || 'Origin';
+    const to         = schedule.routeId?.destination  || 'Destination';
+    const busNumber  = schedule.busId?.busNumber      || 'Bus';
+
+    /* Compute new departure time string */
+    let updatedDepartureText = '';
+    if (schedule.departureTime) {
+      const [hh, mm] = schedule.departureTime.split(':').map(Number);
+      const totalMins = hh * 60 + mm + parsedDelay;
+      const newHH = Math.floor(totalMins / 60) % 24;
+      const newMM = totalMins % 60;
+      const period = newHH >= 12 ? 'PM' : 'AM';
+      const displayH = newHH % 12 || 12;
+      updatedDepartureText = ` New departure: ${displayH}:${String(newMM).padStart(2, '0')} ${period}.`;
+    }
+
+    /* Use provided title/message or build a smart default */
+    const notifTitle   = String(title).trim()   || 'Bus Delay Alert';
+    const notifMessage = String(message).trim() ||
+      `Your bus (${busNumber}) from ${from} to ${to} is delayed by approximately ${parsedDelay} minute${parsedDelay !== 1 ? 's' : ''}.${updatedDepartureText}`;
+
+    /* Deduplication: skip passengers who already have an unread delay
+     * notification for this exact schedule + delay value */
+    const existingNotifs = await Notification.find({
+      scheduleId,
+      type: 'delay',
+      'metadata.delayMinutes': parsedDelay,
+      read: false
+    })
+      .select('userId')
+      .lean();
+
+    const alreadyNotifiedSet = new Set(
+      existingNotifs.filter(n => n?.userId).map(n => n.userId.toString())
+    );
+
+    const notificationsToCreate = affectedBookings
+      .filter(b => b?.userId && !alreadyNotifiedSet.has(b.userId.toString()))
+      .map(b => ({
+        userId:     b.userId,
+        type:       'delay',
+        category:   'Delay',
+        title:      notifTitle,
+        message:    notifMessage,
+        bookingId:  b._id,
+        scheduleId: schedule._id,
+        metadata: {
+          delayMinutes:          parsedDelay,
+          busNumber,
+          from,
+          to,
+          originalDepartureTime: schedule.departureTime,
+          travelDate:            schedule.travelDate
+        }
+      }));
+
+    let notified = 0;
+    if (notificationsToCreate.length > 0) {
+      const created = await Notification.insertMany(notificationsToCreate);
+      notified = created.length;
+
+      /* Emit via existing Socket.IO per-user room */
+      if (global.socketIO) {
+        created.forEach(notif => {
+          if (!notif?.userId) return;
+          global.socketIO.to(`user:${notif.userId}`).emit('notification:new', notif);
+        });
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Delay alert sent. ${notified} passenger${notified !== 1 ? 's' : ''} notified.`,
+      data: { scheduleId, delayMinutes: parsedDelay, notified }
+    });
+  }
+
+  /* ════════════════════════════════════════════════════════════════════════
+   *  GENERAL / BOOKING / SMARTSEAT / PAYMENT / SYSTEM NOTIFICATIONS
+   * ════════════════════════════════════════════════════════════════════════ */
+
+  if (!target) {
+    return res.status(400).json({ success: false, message: 'target is required for non-delay notifications ("all" or "user:<id>")' });
+  }
+
+  let recipientIds = [];
+
+  if (target === 'all') {
+    /* Broadcast to all active non-admin passengers */
+    const users = await User.find({ isActive: true, role: { $ne: 'admin' } })
+      .select('_id')
+      .lean();
+    recipientIds = users.map(u => u._id);
+  } else if (String(target).startsWith('user:')) {
+    const userId = String(target).replace('user:', '').trim();
+    if (!userId) {
+      return res.status(400).json({ success: false, message: 'Invalid target user id' });
+    }
+    recipientIds = [userId];
+  } else {
+    return res.status(400).json({ success: false, message: 'target must be "all" or "user:<id>"' });
+  }
+
+  if (recipientIds.length === 0) {
+    return res.status(200).json({
+      success: true,
+      message: 'No recipients found.',
+      data: { notified: 0 }
+    });
+  }
+
+  const notificationsToCreate = recipientIds.map(uid => ({
+    userId:   uid,
+    type:     type,
+    category: category,
+    title:    String(title).trim(),
+    message:  String(message).trim()
+  }));
+
+  const created = await Notification.insertMany(notificationsToCreate);
+  const notified = created.length;
+
+  /* Emit via existing Socket.IO */
+  if (global.socketIO) {
+    created.forEach(notif => {
+      if (!notif?.userId) return;
+      global.socketIO.to(`user:${notif.userId}`).emit('notification:new', notif);
+    });
+  }
+
+  return res.status(200).json({
+    success: true,
+    message: `Notification sent to ${notified} recipient${notified !== 1 ? 's' : ''}.`,
+    data: { notified }
+  });
+});
+
+/*
+|--------------------------------------------------------------------------
+| GET BUSES FOR NOTIFICATION MODAL
+|--------------------------------------------------------------------------
+|
+| GET /api/admin/notification-buses
+|
+| Returns a lightweight list of active buses for the delay-alert dropdown.
+|
+*/
+
+exports.getBusesForNotification = asyncHandler(async (req, res, next) => {
+  const buses = await Bus.find({ isActive: true })
+    .select('_id busNumber operatorName busType')
+    .sort({ busNumber: 1 })
+    .lean();
+
+  res.status(200).json({
+    success: true,
+    data: buses.map(b => ({
+      id:           b._id,
+      busNumber:    b.busNumber,
+      operatorName: b.operatorName,
+      busType:      b.busType
+    }))
+  });
+});
+
+/*
+|--------------------------------------------------------------------------
+| GET SCHEDULES FOR A BUS (notification modal)
+|--------------------------------------------------------------------------
+|
+| GET /api/admin/notification-schedules?busId=<id>
+|
+| Returns upcoming active schedules for the given bus so the admin can
+| pick which schedule to send a delay alert for.
+|
+*/
+
+exports.getSchedulesForNotification = asyncHandler(async (req, res, next) => {
+  const { busId } = req.query;
+
+  if (!busId) {
+    return res.status(400).json({ success: false, message: 'busId query param is required' });
+  }
+
+  const query = { busId, isActive: true };
+
+  const schedules = await Schedule.find(query)
+    .populate('routeId', 'source destination')
+    .sort({ travelDate: 1, departureTime: 1 })
+    .lean();
+
+  res.status(200).json({
+    success: true,
+    data: schedules.map(s => {
+      const from = s.routeId?.source      || 'Origin';
+      const to   = s.routeId?.destination || 'Destination';
+      const date = s.travelDate
+        ? new Date(s.travelDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+        : '';
+      return {
+        id:            s._id,
+        from,
+        to,
+        departureTime: s.departureTime,
+        arrivalTime:   s.arrivalTime,
+        travelDate:    s.travelDate,
+        displayLabel:  `${from} → ${to} | ${date} ${s.departureTime}`,
+        delayMinutes:  s.delayMinutes || 0,
+        fare:          s.fare
+      };
+    })
+  });
+});

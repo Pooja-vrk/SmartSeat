@@ -4,6 +4,7 @@ const Bus = require('../models/Bus');
 const Schedule = require('../models/Schedule');
 const Route = require('../models/Route');
 const Seat = require('../models/Seat');
+const SmartSeatPreference = require('../models/SmartSeatPreference');
 
 const asyncHandler = require('../utils/asyncHandler');
 const { generateSeatLayout } = require('../utils/seatUtils');
@@ -411,33 +412,63 @@ exports.getBusSeats = asyncHandler(async (req, res) => {
     column: 1
   });
 
-  // For booked seats, fetch the associated booking to get passenger gender.
-  // This lets the frontend show gender-based seat colors without exposing
-  // any other passenger personal data.
+  // For booked seats, fetch the associated booking to get passenger name + gender,
+  // BUT only expose those when the booked passenger has opted in via
+  // profileVisibility = true in their SmartSeatPreference.
+  //
+  // Privacy contract (enforced server-side before the HTTP response is built):
+  //   profileVisibility = true  → return passenger: { name, gender }
+  //   profileVisibility = false (or missing/no pref doc) → omit passenger entirely
+  //
+  // The key "passenger" is absent from the response object when visibility is OFF.
+  // The frontend never receives name or gender when the passenger has not opted in.
   const bookedSeatIds = seats
     .filter((s) => s.status === 'booked' && s.bookingId)
     .map((s) => s.bookingId);
 
-  const bookingGenderMap = {};
+  // bookingId → { name, gender, userId }
+  const bookingInfoMap = {};
   if (bookedSeatIds.length > 0) {
     const Booking = require('../models/Booking');
     const bookings = await Booking.find(
       { _id: { $in: bookedSeatIds } },
-      { _id: 1, 'passengerDetails.gender': 1 }
+      { _id: 1, userId: 1, 'passengerDetails.name': 1, 'passengerDetails.gender': 1 }
     ).lean();
     bookings.forEach((b) => {
-      bookingGenderMap[b._id.toString()] =
-        b.passengerDetails?.gender || 'other';
+      bookingInfoMap[b._id.toString()] = {
+        name:   b.passengerDetails?.name   || '',
+        gender: b.passengerDetails?.gender || 'other',
+        userId: b.userId ? b.userId.toString() : null
+      };
     });
   }
 
-  const formattedSeats = seats.map((seat) => {
-    const passengerGender =
-      seat.status === 'booked' && seat.bookingId
-        ? bookingGenderMap[seat.bookingId.toString()] || 'other'
-        : null;
+  // Batch-fetch SmartSeatPreference for all booked passenger userIds (one query).
+  const bookedUserIds = [
+    ...new Set(
+      Object.values(bookingInfoMap)
+        .map((b) => b.userId)
+        .filter(Boolean)
+    )
+  ];
 
-    return {
+  // userId (string) → profileVisibility (boolean)
+  const visibilityMap = {};
+  if (bookedUserIds.length > 0) {
+    const prefs = await SmartSeatPreference.find(
+      { userId: { $in: bookedUserIds } },
+      { userId: 1, profileVisibility: 1 }
+    ).lean();
+    prefs.forEach((p) => {
+      // Treat missing/null as false (OFF) — backward-compatible with existing docs
+      visibilityMap[p.userId.toString()] = Boolean(p.profileVisibility);
+    });
+    // Any userId NOT in the prefs collection has no doc → treated as OFF
+  }
+
+  const formattedSeats = seats.map((seat) => {
+    // Base seat object — no identity fields yet
+    const formatted = {
       id: seat._id,
 
       seatNumber: seat.seatNumber,
@@ -465,12 +496,31 @@ exports.getBusSeats = asyncHandler(async (req, res) => {
         Array.isArray(seat.adjacentSeatNumbers) &&
         seat.adjacentSeatNumbers.length > 0
           ? seat.adjacentSeatNumbers[0]
-          : null,
-
-      // passengerGender is only present on booked seats.
-      // Values: 'male' | 'female' | 'other' | null
-      passengerGender
+          : null
     };
+
+    // Conditionally attach passenger identity ONLY for booked seats whose
+    // owner has profileVisibility = true.
+    if (seat.status === 'booked' && seat.bookingId) {
+      const info = bookingInfoMap[seat.bookingId.toString()];
+      if (info) {
+        const isVisible =
+          info.userId && visibilityMap[info.userId] === true;
+
+        if (isVisible) {
+          // Expose ONLY name + gender — never email, phone, address, token, etc.
+          formatted.passenger = {
+            name:   info.name,
+            gender: info.gender
+          };
+          // Also set passengerGender for the seat-icon badge (backward compat)
+          formatted.passengerGender = info.gender;
+        }
+        // When OFF: "passenger" and "passengerGender" keys are simply absent.
+      }
+    }
+
+    return formatted;
   });
 
   return res.status(200).json({

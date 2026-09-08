@@ -99,7 +99,9 @@ const SeatSelection = ({
     if (!seat) return null;
     const status = getSeatStatus(seat);
     const isBooked = status === 'booked' || status === 'reserved';
-    const gender = seat.passengerGender || seat.passengerDetails?.gender || null;
+    // Read from structured "passenger" object (new) OR legacy passengerGender field
+    const passengerName   = seat.passenger?.name   || null;
+    const passengerGender = seat.passenger?.gender || seat.passengerGender || seat.passengerDetails?.gender || null;
     const seatPosition = seat.windowSide ? 'Window Side' : seat.isAisle ? 'Aisle Side' : 'Standard Seat';
 
     return (
@@ -145,17 +147,25 @@ const SeatSelection = ({
                 <span className="text-slate-400">Status:</span>
                 <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30 uppercase">{status}</span>
               </div>
-              {gender ? (
-                <div className="mt-1 bg-slate-900/80 p-1.5 rounded border border-slate-800">
-                  <div className="flex items-center gap-1.5 text-slate-200 font-medium capitalize">
-                    <User className="w-3.5 h-3.5 text-rose-400" />
-                    <span>Gender: {gender}</span>
-                  </div>
+              {(passengerName || passengerGender) ? (
+                <div className="mt-1 bg-slate-900/80 p-1.5 rounded border border-slate-800 space-y-1">
+                  {passengerName && (
+                    <div className="flex items-center gap-1.5 text-slate-200 font-medium">
+                      <User className="w-3.5 h-3.5 text-rose-400 flex-shrink-0" />
+                      <span>Name: {passengerName}</span>
+                    </div>
+                  )}
+                  {passengerGender && (
+                    <div className="flex items-center gap-1.5 text-slate-200 font-medium capitalize">
+                      <User className="w-3.5 h-3.5 text-rose-400 flex-shrink-0" />
+                      <span>Gender: {passengerGender}</span>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="mt-1 bg-slate-900/90 p-1.5 rounded border border-slate-800 text-[11px] text-slate-400 flex items-center gap-1.5">
                   <ShieldAlert className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
-                  <span>Passenger details unavailable</span>
+                  <span>Passenger info is private</span>
                 </div>
               )}
             </div>
@@ -182,7 +192,7 @@ const SeatSelection = ({
   const render3DSeat = (seat) => {
     const status = getSeatStatus(seat);
     const isPopoverOpen = activePopoverSeat?.seatNumber === seat.seatNumber;
-    const gender = seat.passengerGender || seat.passengerDetails?.gender || null;
+    const gender = seat.passenger?.gender || seat.passengerGender || seat.passengerDetails?.gender || null;
 
     const variantClasses = {
       available: 'seat-3d-available',
@@ -246,7 +256,7 @@ const SeatSelection = ({
     const status = getSeatStatus(seat);
     const isPopoverOpen = activePopoverSeat?.seatNumber === seat.seatNumber;
     const isUpper = seat.berth === 'upper';
-    const gender = seat.passengerGender || null;
+    const gender = seat.passenger?.gender || seat.passengerGender || null;
 
     const stateClass = {
       available: 'berth-available',
@@ -312,7 +322,7 @@ const SeatSelection = ({
     if (!seat) return null;
     const status = getSeatStatus(seat);
     const isPopoverOpen = activePopoverSeat?.seatNumber === seat.seatNumber;
-    const gender = seat.passengerGender || null;
+    const gender = seat.passenger?.gender || seat.passengerGender || null;
 
     const stateClass = {
       available: 'recliner-available',

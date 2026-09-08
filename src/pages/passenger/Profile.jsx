@@ -1,9 +1,10 @@
 // Profile and preferences page - SmartSeat Passenger Control Panel
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardHeader, CardBody, Button, Input, Select, Switch } from '../../components/common';
 import { useAuth } from '../../context/AuthContext';
 import { useSmartSeat } from '../../context/SmartSeatContext';
+import { userService } from '../../services/userService';
 import { 
   User, 
   Mail, 
@@ -36,6 +37,42 @@ const Profile = () => {
 
   const [preferencesData, setPreferencesData] = useState(preferences);
 
+  // ── Privacy tab state (loaded from / saved to backend) ──────────────────
+  const [privacyPrefs, setPrivacyPrefs] = useState({
+    profileVisibility: false,
+    showPassengerCategory: false
+  });
+  const [privacyLoading, setPrivacyLoading] = useState(false);
+  const [privacySaving, setPrivacySaving] = useState(false);
+  const [privacyError, setPrivacyError] = useState('');
+  const [privacySuccess, setPrivacySuccess] = useState(false);
+
+  // Load privacy preferences from the backend whenever the Privacy tab is shown
+  const loadPrivacyPrefs = useCallback(async () => {
+    setPrivacyLoading(true);
+    setPrivacyError('');
+    try {
+      const res = await userService.getPreferences();
+      if (res && res.success && res.data) {
+        setPrivacyPrefs({
+          // Treat missing/null as false (OFF) for backward-compatibility
+          profileVisibility:      Boolean(res.data.profileVisibility),
+          showPassengerCategory:  Boolean(res.data.showPermittedPassengerCategory)
+        });
+      }
+    } catch (err) {
+      setPrivacyError('Could not load privacy settings. Please try again.');
+    } finally {
+      setPrivacyLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'privacy') {
+      loadPrivacyPrefs();
+    }
+  }, [activeTab, loadPrivacyPrefs]);
+
   useEffect(() => {
     setPreferencesData(preferences);
   }, [preferences]);
@@ -59,6 +96,31 @@ const Profile = () => {
     updatePreferences(preferencesData);
     setSuccess(true);
     setTimeout(() => setSuccess(false), 3000);
+  };
+
+  // Persist privacy settings to the backend via PATCH /api/users/me/preferences
+  const handlePrivacySave = async () => {
+    setPrivacySaving(true);
+    setPrivacyError('');
+    setPrivacySuccess(false);
+    try {
+      const res = await userService.updatePreferences({
+        profileVisibility:             privacyPrefs.profileVisibility,
+        showPermittedPassengerCategory: privacyPrefs.showPassengerCategory
+      });
+      if (res && res.success) {
+        setPrivacySuccess(true);
+        setTimeout(() => setPrivacySuccess(false), 3000);
+      } else {
+        setPrivacyError(res?.message || 'Failed to save privacy settings.');
+      }
+    } catch (err) {
+      setPrivacyError(
+        err?.message || 'Failed to save privacy settings. Please try again.'
+      );
+    } finally {
+      setPrivacySaving(false);
+    }
   };
 
   const tabs = [
@@ -340,34 +402,92 @@ const Profile = () => {
                   <h3 className="text-base font-black text-slate-900 uppercase tracking-wider">Privacy Controls</h3>
                 </div>
 
-                <div className="space-y-4 text-xs">
-                  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                    <div>
-                      <p className="font-bold text-slate-900">Show Passenger Category</p>
-                      <p className="text-slate-500">Allow others to see your passenger category</p>
+                {privacyLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-slate-500 py-4">
+                    <div className="w-4 h-4 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+                    Loading privacy settings…
+                  </div>
+                ) : (
+                  <div className="space-y-4 text-xs">
+
+                    {/* ── Profile Visibility ────────────────────────────── */}
+                    <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                      <div>
+                        <p className="font-bold text-slate-900">Profile Visibility</p>
+                        <p className="text-slate-500">
+                          Allow other passengers to see your name and gender
+                          when viewing your booked seat.
+                        </p>
+                      </div>
+                      <Switch
+                        checked={privacyPrefs.profileVisibility}
+                        onChange={(checked) =>
+                          setPrivacyPrefs(prev => ({ ...prev, profileVisibility: checked }))
+                        }
+                      />
                     </div>
-                    <Switch
-                      checked={preferencesData.showPassengerCategory}
-                      onChange={(checked) => setPreferencesData({...preferencesData, showPassengerCategory: checked})}
-                    />
-                  </div>
 
-                  <div className="p-4 bg-cyan-50/80 rounded-2xl border border-cyan-200">
-                    <h4 className="font-bold text-cyan-950 mb-1">Privacy Notice</h4>
-                    <p className="text-cyan-800 leading-relaxed">
-                      Your personal information is protected by our privacy policy. Passenger category information is only shared when you enable this setting and is used solely for seat preference matching.
-                    </p>
-                  </div>
+                    {/* Current state hint */}
+                    <div className={`px-4 py-2 rounded-xl text-[11px] font-semibold border ${
+                      privacyPrefs.profileVisibility
+                        ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                        : 'bg-slate-100 border-slate-200 text-slate-500'
+                    }`}>
+                      {privacyPrefs.profileVisibility
+                        ? '✓ Your name and gender will be visible to others on the seat map.'
+                        : '✗ Your name and gender are hidden from others on the seat map (default).'}
+                    </div>
 
-                  <Button
-                    variant="primary"
-                    onClick={handlePreferencesSave}
-                    icon={Save}
-                    className="bg-gradient-to-r from-cyan-500 to-teal-500 text-slate-950 font-bold text-xs uppercase tracking-wider px-6 py-3 rounded-xl shadow-md"
-                  >
-                    Save Privacy Settings
-                  </Button>
-                </div>
+                    {/* ── Show Passenger Category ───────────────────────── */}
+                    <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                      <div>
+                        <p className="font-bold text-slate-900">Show Passenger Category</p>
+                        <p className="text-slate-500">Allow others to see your passenger category</p>
+                      </div>
+                      <Switch
+                        checked={privacyPrefs.showPassengerCategory}
+                        onChange={(checked) =>
+                          setPrivacyPrefs(prev => ({ ...prev, showPassengerCategory: checked }))
+                        }
+                      />
+                    </div>
+
+                    {/* ── Privacy Notice ────────────────────────────────── */}
+                    <div className="p-4 bg-cyan-50/80 rounded-2xl border border-cyan-200">
+                      <h4 className="font-bold text-cyan-950 mb-1">Privacy Notice</h4>
+                      <p className="text-cyan-800 leading-relaxed">
+                        Your personal information is protected. When Profile Visibility is OFF,
+                        your name and gender are never sent to other passengers' browsers — the
+                        restriction is enforced on the server. Only your seat position and fare
+                        are shown.
+                      </p>
+                    </div>
+
+                    {/* Error / success feedback */}
+                    {privacyError && (
+                      <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs">
+                        {privacyError}
+                      </div>
+                    )}
+                    {privacySuccess && (
+                      <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+                        <Save className="w-3.5 h-3.5" />
+                        Privacy settings saved.
+                      </div>
+                    )}
+
+                    <Button
+                      variant="primary"
+                      onClick={handlePrivacySave}
+                      loading={privacySaving}
+                      disabled={privacySaving}
+                      icon={Save}
+                      className="bg-gradient-to-r from-cyan-500 to-teal-500 text-slate-950 font-bold text-xs uppercase tracking-wider px-6 py-3 rounded-xl shadow-md"
+                    >
+                      Save Privacy Settings
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
 

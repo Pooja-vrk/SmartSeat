@@ -137,7 +137,8 @@ class SmartSeatService {
           allowSeatRecommendations: true,
           sectionPreference: 'middle',
           windowPreference: true,
-          accessibilityPriority: false
+          accessibilityPriority: false,
+          profileVisibility: false
         });
       }
 

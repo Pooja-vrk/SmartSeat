@@ -41,6 +41,13 @@ const smartSeatPreferenceSchema = new mongoose.Schema({
   accessibilityPriority: {
     type: Boolean,
     default: false
+  },
+  // Profile Visibility: when true, the passenger's name and gender are shown
+  // to other passengers in the seat-map popup. Default is false (hidden).
+  // Existing documents that lack this field are treated as false by the backend.
+  profileVisibility: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true

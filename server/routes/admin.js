@@ -10,6 +10,9 @@ const {
   getBookings,
   getPassengers,
   getNotifications,
+  sendNotification,
+  getBusesForNotification,
+  getSchedulesForNotification,
   getAnalytics,
   getSettings,
   updateSettings,
@@ -31,6 +34,9 @@ router.delete('/buses/:id', authenticate, requireAdmin, deleteBus);
 router.get('/bookings', authenticate, requireAdmin, getBookings);
 router.get('/passengers', authenticate, requireAdmin, getPassengers);
 router.get('/notifications', authenticate, requireAdmin, getNotifications);
+router.post('/notifications', authenticate, requireAdmin, sendNotification);
+router.get('/notification-buses', authenticate, requireAdmin, getBusesForNotification);
+router.get('/notification-schedules', authenticate, requireAdmin, getSchedulesForNotification);
 router.get('/analytics', authenticate, requireAdmin, getAnalytics);
 router.get('/settings', authenticate, requireAdmin, getSettings);
 router.patch('/settings', authenticate, requireAdmin, updateSettings);

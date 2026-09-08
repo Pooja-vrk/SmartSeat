@@ -92,6 +92,44 @@ export const adminService = {
     }
   },
 
+  // Send a notification (admin-initiated)
+  sendNotification: async (payload) => {
+    try {
+      const response = await api.post('/admin/notifications', payload);
+      return response;
+    } catch (error) {
+      throw error.response?.data || { success: false, message: 'Failed to send notification' };
+    }
+  },
+
+  // Get buses for notification modal dropdowns
+  getBusesForNotification: async () => {
+    try {
+      const response = await api.get('/admin/notification-buses');
+      return response;
+    } catch (error) {
+      const msg =
+        error?.message ||
+        error?.response?.data?.message ||
+        'Failed to fetch buses';
+      throw new Error(msg);
+    }
+  },
+
+  // Get schedules for a specific bus (notification modal)
+  getSchedulesForBus: async (busId) => {
+    try {
+      const response = await api.get('/admin/notification-schedules', { params: { busId } });
+      return response;
+    } catch (error) {
+      const msg =
+        error?.message ||
+        error?.response?.data?.message ||
+        'Failed to fetch schedules';
+      throw new Error(msg);
+    }
+  },
+
   // Get analytics
   getAnalytics: async (period = 'month') => {
     try {
