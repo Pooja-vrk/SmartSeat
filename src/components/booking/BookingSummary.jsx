@@ -31,6 +31,8 @@ const BookingSummary = ({
   passengerDetails,
   multiPassengerDetails,
   smartSeatMonitoring,
+  boardingPoint,
+  droppingPoint,
 }) => {
 
   // Derive the display seat(s) — multi takes precedence
@@ -168,6 +170,23 @@ const BookingSummary = ({
               <MapPin className="w-4 h-4 text-rose-400" />
             </div>
           </div>
+
+          {(boardingPoint || droppingPoint) && (
+            <div className="pt-2 border-t border-slate-800/80 space-y-1.5 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400 text-[11px]">Boarding:</span>
+                <span className="font-semibold text-emerald-300">
+                  {typeof boardingPoint === 'object' ? boardingPoint?.name : boardingPoint || from}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400 text-[11px]">Dropping:</span>
+                <span className="font-semibold text-rose-300">
+                  {typeof droppingPoint === 'object' ? droppingPoint?.name : droppingPoint || to}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* DATE & DURATION */}

@@ -351,5 +351,38 @@ export const busService = {
         }
       );
     }
+  },
+
+  // ==========================================================
+  // GET ROUTE STOPS
+  // ==========================================================
+
+  getRouteStops: async (from, to, routeId = null) => {
+    try {
+      let endpoint = '/buses/routes/stops';
+      const params = {};
+
+      if (routeId) {
+        endpoint = `/buses/routes/${routeId}/stops`;
+      } else {
+        if (from) params.from = from;
+        if (to) params.to = to;
+      }
+
+      const response = await api.get(endpoint, { params });
+      return {
+        success: true,
+        route: response?.route || response?.data?.route || null,
+        stops: response?.stops || response?.data?.stops || [],
+        data: response?.data || response
+      };
+    } catch (error) {
+      throw (
+        error.response?.data || {
+          success: false,
+          message: 'Failed to get route stops'
+        }
+      );
+    }
   }
 };

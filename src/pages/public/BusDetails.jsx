@@ -384,6 +384,10 @@ const BusDetails = () => {
         return;
       }
 
+      const boardingPoint = busDetailsSearchParams.get('boardingPoint') || '';
+      const droppingPoint = busDetailsSearchParams.get('droppingPoint') || '';
+      const passengers = busDetailsSearchParams.get('passengers') || '';
+
       setSearchParameters({
         from:
           bus.route?.source ||
@@ -397,16 +401,21 @@ const BusDetails = () => {
 
         date:
           bus.travelDate ||
-          ''
+          '',
+
+        boardingPoint,
+        droppingPoint,
+        passengers
       });
 
-      const passengers = busDetailsSearchParams.get('passengers');
-      const passengersParam = passengers && Number(passengers) > 1
-        ? `?passengers=${passengers}`
-        : '';
+      const params = new URLSearchParams();
+      if (boardingPoint) params.set('boardingPoint', boardingPoint);
+      if (droppingPoint) params.set('droppingPoint', droppingPoint);
+      if (passengers && Number(passengers) > 1) params.set('passengers', passengers);
+      const queryString = params.toString() ? `?${params.toString()}` : '';
 
       navigate(
-        `/booking/${busId}/${scheduleId}/seats${passengersParam}`
+        `/booking/${busId}/${scheduleId}/seats${queryString}`
       );
     };
 
@@ -681,6 +690,15 @@ const BusDetails = () => {
                 </div>
 
               </div>
+
+              {(busDetailsSearchParams.get('boardingPoint') || busDetailsSearchParams.get('droppingPoint')) && (
+                <div className="mt-4 p-3 bg-cyan-50 rounded-lg border border-cyan-200 flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5 text-cyan-900 font-medium">
+                    <MapPin className="w-4 h-4 text-cyan-600 shrink-0" />
+                    <span>Selected Stops: <strong>{busDetailsSearchParams.get('boardingPoint') || from}</strong> → <strong>{busDetailsSearchParams.get('droppingPoint') || to}</strong></span>
+                  </div>
+                </div>
+              )}
             </CardBody>
           </Card>
 

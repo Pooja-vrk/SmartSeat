@@ -120,8 +120,17 @@ const SEAT_STATES = [
 // ─────────────────────────────────────────────
 
 const Home = () => {
-  const [searchParams, setSearchParams] = useState({ from: '', to: '', date: '', passengers: 1 });
+  const [searchParams, setSearchParams] = useState({
+    from: '',
+    to: '',
+    boardingPoint: '',
+    droppingPoint: '',
+    date: '',
+    passengers: 1
+  });
   const [routes, setRoutes] = useState([]);
+  const [routeStops, setRouteStops] = useState([]);
+  const [loadingStops, setLoadingStops] = useState(false);
 
   // Fetch real routes for dropdown population
   useEffect(() => {
@@ -137,6 +146,33 @@ const Home = () => {
     };
     fetchRoutes();
   }, []);
+
+  // Fetch route stops whenever both From and To are selected
+  useEffect(() => {
+    const fetchStops = async () => {
+      if (!searchParams.from || !searchParams.to) {
+        setRouteStops([]);
+        return;
+      }
+
+      setLoadingStops(true);
+      try {
+        const response = await busService.getRouteStops(searchParams.from, searchParams.to);
+        if (response.success && Array.isArray(response.stops)) {
+          setRouteStops(response.stops);
+        } else {
+          setRouteStops([]);
+        }
+      } catch (err) {
+        console.error('Error loading route stops:', err);
+        setRouteStops([]);
+      } finally {
+        setLoadingStops(false);
+      }
+    };
+
+    fetchStops();
+  }, [searchParams.from, searchParams.to]);
 
   // Derive real city lists from API data
   const fromCities = Array.from(
@@ -154,28 +190,112 @@ const Home = () => {
       ).sort()
     : [];
 
-  // Preserve existing handler logic exactly
-  const handleFromChange = (e) => {
-    const newFrom = e.target.value;
-    const newToCities = newFrom
-      ? Array.from(
-          new Set(
-            routes
-              .filter(r => r.source === newFrom)
-              .map(r => r.destination)
-              .filter(Boolean)
-          )
-        )
-      : [];
-    const isToValid = newToCities.includes(searchParams.to);
-    setSearchParams(prev => ({ ...prev, from: newFrom, to: isToValid ? prev.to : '' }));
+  // Boarding point options: stops eligible for pickup (isBoarding !== false, type !== 'drop', sequence < maxSequence)
+  const maxSequence = routeStops.reduce((max, s) => Math.max(max, Number(s.sequence) || 0), 0);
+
+  const isStopBoarding = (s, idx, total) => {
+    if (s.isBoarding === true) return true;
+    if (s.isBoarding === false) return false;
+    if (s.type === 'pickup' || s.type === 'both') return true;
+    if (s.type === 'drop') return false;
+    return idx < total - 1;
   };
 
-  // Preserve existing search handler exactly — now includes passengers count
+  const isStopDropping = (s, idx, total) => {
+    if (s.isDropping === true) return true;
+    if (s.isDropping === false) return false;
+    if (s.type === 'drop' || s.type === 'both') return true;
+    if (s.type === 'pickup') return false;
+    return idx > 0;
+  };
+
+  let boardingOptions = routeStops.filter((s, idx) =>
+    isStopBoarding(s, idx, routeStops.length) && (maxSequence === 0 || Number(s.sequence) < maxSequence)
+  );
+  if (boardingOptions.length === 0 && routeStops.length > 0) {
+    boardingOptions = routeStops.length > 1 ? routeStops.slice(0, routeStops.length - 1) : routeStops;
+  }
+
+  // Dropping point options: stops with sequence strictly greater than selected boarding point
+  const selectedBoardingStop = routeStops.find(
+    (s) =>
+      s.name.trim().toLowerCase() === (searchParams.boardingPoint || '').trim().toLowerCase() ||
+      (s.stopId && String(s.stopId) === String(searchParams.boardingPoint)) ||
+      (s._id && String(s._id) === String(searchParams.boardingPoint))
+  );
+
+  let droppingOptions = selectedBoardingStop
+    ? routeStops.filter(
+        (s, idx) =>
+          Number(s.sequence) > Number(selectedBoardingStop.sequence) &&
+          isStopDropping(s, idx, routeStops.length)
+      )
+    : [];
+  if (selectedBoardingStop && droppingOptions.length === 0) {
+    droppingOptions = routeStops.filter(
+      (s) => Number(s.sequence) > Number(selectedBoardingStop.sequence)
+    );
+  }
+
+  // Cascade Reset 1: When From changes -> reset To, Date, Boarding, Dropping
+  const handleFromChange = (e) => {
+    const newFrom = e.target.value;
+    setSearchParams({
+      from: newFrom,
+      to: '',
+      date: '',
+      boardingPoint: '',
+      droppingPoint: '',
+      passengers: searchParams.passengers || 1
+    });
+    setRouteStops([]);
+  };
+
+  // Cascade Reset 2: When To changes -> reset Date, Boarding, Dropping
+  const handleToChange = (e) => {
+    const newTo = e.target.value;
+    setSearchParams(prev => ({
+      ...prev,
+      to: newTo,
+      date: '',
+      boardingPoint: '',
+      droppingPoint: ''
+    }));
+  };
+
+  // Cascade 3: When Date changes -> update date
+  const handleDateChange = (e) => {
+    const newDate = e.target.value;
+    setSearchParams(prev => ({
+      ...prev,
+      date: newDate
+    }));
+  };
+
+  // Cascade Reset 4: When Boarding changes -> reset Dropping
+  const handleBoardingChange = (e) => {
+    const newBoarding = e.target.value;
+    setSearchParams(prev => ({
+      ...prev,
+      boardingPoint: newBoarding,
+      droppingPoint: ''
+    }));
+  };
+
   const handleSearch = (e) => {
     e.preventDefault();
+    if (!searchParams.from || !searchParams.to || !searchParams.date || !searchParams.boardingPoint || !searchParams.droppingPoint) {
+      return;
+    }
     const passengers = Number(searchParams.passengers) || 1;
-    window.location.href = `/search?from=${encodeURIComponent(searchParams.from)}&to=${encodeURIComponent(searchParams.to)}&date=${encodeURIComponent(searchParams.date)}&passengers=${passengers}`;
+    let url = `/search?from=${encodeURIComponent(searchParams.from)}&to=${encodeURIComponent(searchParams.to)}&date=${encodeURIComponent(searchParams.date)}&passengers=${passengers}`;
+    if (searchParams.boardingPoint) {
+      url += `&boardingPoint=${encodeURIComponent(searchParams.boardingPoint)}`;
+    }
+    if (searchParams.droppingPoint) {
+      url += `&droppingPoint=${encodeURIComponent(searchParams.droppingPoint)}`;
+    }
+    window.location.href = url;
   };
 
   return (
@@ -336,7 +456,7 @@ const Home = () => {
             {/* search form — all handlers preserved exactly */}
             <form onSubmit={handleSearch} className="ss-search-form" noValidate>
 
-              {/* FROM */}
+              {/* 1. FROM */}
               <div className="ss-search-form__field">
                 <label className="ss-search-form__label" htmlFor="home-from">
                   FROM
@@ -359,7 +479,7 @@ const Home = () => {
                 </div>
               </div>
 
-              {/* TO */}
+              {/* 2. TO */}
               <div className="ss-search-form__field">
                 <label className="ss-search-form__label" htmlFor="home-to">
                   TO
@@ -370,7 +490,7 @@ const Home = () => {
                     id="home-to"
                     className="ss-search-form__select"
                     value={searchParams.to}
-                    onChange={(e) => setSearchParams(prev => ({ ...prev, to: e.target.value }))}
+                    onChange={handleToChange}
                     disabled={!searchParams.from}
                     required
                     aria-label="Destination city"
@@ -386,7 +506,7 @@ const Home = () => {
                 </div>
               </div>
 
-              {/* DATE */}
+              {/* 3. DATE */}
               <div className="ss-search-form__field">
                 <label className="ss-search-form__label" htmlFor="home-date">
                   DATE
@@ -396,16 +516,88 @@ const Home = () => {
                   <input
                     id="home-date"
                     type="date"
+                    min={new Date().toISOString().split('T')[0]}
+                    max={new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
                     className="ss-search-form__select"
                     value={searchParams.date}
-                    onChange={(e) => setSearchParams(prev => ({ ...prev, date: e.target.value }))}
+                    onChange={handleDateChange}
+                    disabled={!searchParams.from || !searchParams.to}
                     required
                     aria-label="Travel date"
+                    aria-disabled={!searchParams.from || !searchParams.to}
                   />
                 </div>
               </div>
 
-              {/* PASSENGERS */}
+              {/* 4. BOARDING POINT */}
+              <div className="ss-search-form__field">
+                <label className="ss-search-form__label" htmlFor="home-boarding">
+                  BOARDING POINT
+                </label>
+                <div className="ss-search-form__input-wrap">
+                  <Navigation className="ss-search-form__icon ss-search-form__icon--cyan" aria-hidden="true" />
+                  <select
+                    id="home-boarding"
+                    className="ss-search-form__select"
+                    value={searchParams.boardingPoint}
+                    onChange={handleBoardingChange}
+                    disabled={!searchParams.from || !searchParams.to || loadingStops || boardingOptions.length === 0}
+                    required
+                    aria-label="Boarding point"
+                    aria-disabled={!searchParams.from || !searchParams.to || loadingStops}
+                  >
+                    <option value="">
+                      {!searchParams.from || !searchParams.to
+                        ? 'Select departure & destination first'
+                        : loadingStops
+                        ? 'Loading boarding points...'
+                        : boardingOptions.length === 0
+                        ? 'No boarding points available for this route'
+                        : 'Select boarding point'}
+                    </option>
+                    {boardingOptions.map(stop => (
+                      <option key={stop.stopId || stop._id || stop.name} value={stop.name}>
+                        {stop.name} {stop.city && stop.city !== stop.name ? `(${stop.city})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* 5. DROPPING POINT */}
+              <div className="ss-search-form__field">
+                <label className="ss-search-form__label" htmlFor="home-dropping">
+                  DROPPING POINT
+                </label>
+                <div className="ss-search-form__input-wrap">
+                  <MapPin className="ss-search-form__icon ss-search-form__icon--emerald" aria-hidden="true" />
+                  <select
+                    id="home-dropping"
+                    className="ss-search-form__select"
+                    value={searchParams.droppingPoint}
+                    onChange={(e) => setSearchParams(prev => ({ ...prev, droppingPoint: e.target.value }))}
+                    disabled={!searchParams.boardingPoint || droppingOptions.length === 0}
+                    required
+                    aria-label="Dropping point"
+                    aria-disabled={!searchParams.boardingPoint}
+                  >
+                    <option value="">
+                      {!searchParams.boardingPoint
+                        ? 'Select boarding point first'
+                        : droppingOptions.length === 0
+                        ? 'No downstream dropping points available'
+                        : 'Select dropping point'}
+                    </option>
+                    {droppingOptions.map(stop => (
+                      <option key={stop.stopId || stop._id || stop.name} value={stop.name}>
+                        {stop.name} {stop.city && stop.city !== stop.name ? `(${stop.city})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* 6. PASSENGERS */}
               <div className="ss-search-form__field">
                 <label className="ss-search-form__label" htmlFor="home-passengers">
                   PASSENGERS
@@ -421,6 +613,7 @@ const Home = () => {
                       borderRadius: '0.875rem',
                       overflow: 'hidden',
                       height: '48px',
+                      opacity: !searchParams.droppingPoint ? 0.6 : 1
                     }}
                   >
                     <button
@@ -440,11 +633,11 @@ const Home = () => {
                         color: '#0891b2',
                         background: 'transparent',
                         border: 'none',
-                        cursor: searchParams.passengers <= 1 ? 'not-allowed' : 'pointer',
-                        opacity: searchParams.passengers <= 1 ? 0.35 : 1,
+                        cursor: !searchParams.droppingPoint || searchParams.passengers <= 1 ? 'not-allowed' : 'pointer',
+                        opacity: !searchParams.droppingPoint || searchParams.passengers <= 1 ? 0.35 : 1,
                         flexShrink: 0,
                       }}
-                      disabled={searchParams.passengers <= 1}
+                      disabled={!searchParams.droppingPoint || searchParams.passengers <= 1}
                     >
                       −
                     </button>
@@ -478,11 +671,11 @@ const Home = () => {
                         color: '#0891b2',
                         background: 'transparent',
                         border: 'none',
-                        cursor: searchParams.passengers >= 6 ? 'not-allowed' : 'pointer',
-                        opacity: searchParams.passengers >= 6 ? 0.35 : 1,
+                        cursor: !searchParams.droppingPoint || searchParams.passengers >= 6 ? 'not-allowed' : 'pointer',
+                        opacity: !searchParams.droppingPoint || searchParams.passengers >= 6 ? 0.35 : 1,
                         flexShrink: 0,
                       }}
-                      disabled={searchParams.passengers >= 6}
+                      disabled={!searchParams.droppingPoint || searchParams.passengers >= 6}
                     >
                       +
                     </button>
@@ -492,7 +685,11 @@ const Home = () => {
 
               {/* SUBMIT */}
               <div className="ss-search-form__submit-wrap">
-                <button type="submit" className="ss-search-form__submit">
+                <button
+                  type="submit"
+                  className="ss-search-form__submit"
+                  disabled={!searchParams.from || !searchParams.to || !searchParams.date || !searchParams.boardingPoint || !searchParams.droppingPoint}
+                >
                   <Search className="w-4 h-4" aria-hidden="true" />
                   <span>SEARCH BUSES</span>
                   <ArrowRight className="w-4 h-4" aria-hidden="true" />

@@ -65,7 +65,15 @@ class BookingService {
     try {
       session.startTransaction();
 
-      const { userId, scheduleId, seatNumber, passengerDetails, smartSeatMonitoring } = bookingData;
+      const {
+        userId,
+        scheduleId,
+        seatNumber,
+        passengerDetails,
+        smartSeatMonitoring,
+        boardingPoint,
+        droppingPoint
+      } = bookingData;
 
       // Validate schedule exists
       const schedule = await Schedule.findById(scheduleId).session(session);
@@ -78,6 +86,91 @@ class BookingService {
       if (!bus) {
         throw new Error('Bus not found');
       }
+
+      // Fetch route and validate stops
+      const Route = require('../models/Route');
+      const route = await Route.findById(schedule.routeId).session(session);
+      if (!route) {
+        throw new Error('Route not found');
+      }
+
+      // Normalize stops for this route
+      const { normalizeRouteStops } = require('../controllers/busController');
+      const routeStops = normalizeRouteStops ? normalizeRouteStops(route) : [];
+
+      let selectedBoardingStop = null;
+      let selectedDroppingStop = null;
+
+      if (boardingPoint) {
+        const bpName = typeof boardingPoint === 'string'
+          ? boardingPoint.trim().toLowerCase()
+          : (boardingPoint.name || boardingPoint.stopId || '').trim().toLowerCase();
+
+        selectedBoardingStop = routeStops.find(
+          (s) =>
+            (s.stopId && String(s.stopId).toLowerCase() === bpName) ||
+            (s._id && String(s._id).toLowerCase() === bpName) ||
+            s.name.toLowerCase() === bpName ||
+            s.city.toLowerCase() === bpName
+        );
+      }
+
+      if (droppingPoint) {
+        const dpName = typeof droppingPoint === 'string'
+          ? droppingPoint.trim().toLowerCase()
+          : (droppingPoint.name || droppingPoint.stopId || '').trim().toLowerCase();
+
+        selectedDroppingStop = routeStops.find(
+          (s) =>
+            (s.stopId && String(s.stopId).toLowerCase() === dpName) ||
+            (s._id && String(s._id).toLowerCase() === dpName) ||
+            s.name.toLowerCase() === dpName ||
+            s.city.toLowerCase() === dpName
+        );
+      }
+
+      // If boarding or dropping were supplied, validate existence and sequence order
+      if (boardingPoint && !selectedBoardingStop) {
+        throw new Error('Invalid boarding point for this route');
+      }
+
+      if (droppingPoint && !selectedDroppingStop) {
+        throw new Error('Invalid dropping point for this route');
+      }
+
+      if (selectedBoardingStop && selectedDroppingStop) {
+        if (Number(selectedBoardingStop.sequence) >= Number(selectedDroppingStop.sequence)) {
+          throw new Error('Invalid boarding or dropping point for this route: dropping must be after boarding');
+        }
+      }
+
+      const resolvedBoardingPoint = selectedBoardingStop
+        ? {
+            stopId: selectedBoardingStop.stopId || selectedBoardingStop._id || null,
+            name: selectedBoardingStop.name,
+            city: selectedBoardingStop.city || route.source,
+            time: selectedBoardingStop.departureTime || schedule.departureTime || null
+          }
+        : {
+            stopId: null,
+            name: route.source,
+            city: route.source,
+            time: schedule.departureTime || null
+          };
+
+      const resolvedDroppingPoint = selectedDroppingStop
+        ? {
+            stopId: selectedDroppingStop.stopId || selectedDroppingStop._id || null,
+            name: selectedDroppingStop.name,
+            city: selectedDroppingStop.city || route.destination,
+            time: selectedDroppingStop.arrivalTime || schedule.arrivalTime || null
+          }
+        : {
+            stopId: null,
+            name: route.destination,
+            city: route.destination,
+            time: schedule.arrivalTime || null
+          };
 
       // Atomic seat reservation - prevent double booking
       const seat = await Seat.findOneAndUpdate(
@@ -110,9 +203,6 @@ class BookingService {
       // Calculate GST on the schedule fare
       const { baseFare, gstRate, gstAmount, totalAmount } = calculateGST(schedule.fare);
 
-      // Fetch route and user info for response
-      const Route = require('../models/Route');
-      const route = await Route.findById(schedule.routeId).session(session);
       const user = await User.findById(userId).select('name email phone').session(session);
 
       // Create booking
@@ -124,6 +214,8 @@ class BookingService {
         routeId: schedule.routeId,
         seatNumber,
         passengerDetails,
+        boardingPoint: resolvedBoardingPoint,
+        droppingPoint: resolvedDroppingPoint,
         baseFare,
         gstRate,
         gstAmount,
@@ -187,27 +279,93 @@ class BookingService {
   /**
    * Get bookings for a user
    * @param {String} userId - User ID
-   * @param {Object} filters - Optional filters
+   * @param {Object} filters - Optional filters { status }
    * @returns {Array} User bookings
    */
   async getUserBookings(userId, filters = {}) {
     try {
       const query = { userId };
-      
-      if (filters.status) {
-        query.bookingStatus = filters.status;
+
+      if (filters.status === 'cancelled') {
+        // Explicitly cancelled bookings only
+        query.bookingStatus = 'cancelled';
+
+        const bookings = await Booking.find(query)
+          .populate('scheduleId')
+          .populate('busId')
+          .populate('routeId')
+          .sort({ createdAt: -1 });
+
+        return { success: true, data: bookings };
       }
 
+      if (filters.status === 'completed') {
+        // "Completed" = a confirmed (or pending) booking whose travel date
+        // has already passed.  The bookingStatus field is never automatically
+        // updated to 'completed' by a cron, so we derive the tab from the
+        // schedule date instead.
+        //
+        // Use the start of today in UTC so a booking dated exactly today
+        // stays on the Upcoming tab until midnight (matches the Schedule
+        // model's travelDate which is stored as a Date at 00:00:00 UTC).
+        const todayUTCStart = new Date();
+        todayUTCStart.setUTCHours(0, 0, 0, 0);
+
+        query.bookingStatus = { $in: ['confirmed', 'pending', 'completed'] };
+
+        // Join through scheduleId to filter by travelDate
+        const Schedule = require('../models/Schedule');
+        const pastScheduleIds = await Schedule.find(
+          { travelDate: { $lt: todayUTCStart } },
+          { _id: 1 }
+        ).lean();
+
+        const pastIds = pastScheduleIds.map((s) => s._id);
+        query.scheduleId = { $in: pastIds };
+
+        const bookings = await Booking.find(query)
+          .populate('scheduleId')
+          .populate('busId')
+          .populate('routeId')
+          .sort({ 'scheduleId.travelDate': -1, createdAt: -1 });
+
+        return { success: true, data: bookings };
+      }
+
+      if (filters.status === 'confirmed') {
+        // "Upcoming" = confirmed/pending bookings whose travel date is
+        // today or in the future.
+        const todayUTCStart = new Date();
+        todayUTCStart.setUTCHours(0, 0, 0, 0);
+
+        query.bookingStatus = { $in: ['confirmed', 'pending'] };
+
+        const Schedule = require('../models/Schedule');
+        const upcomingScheduleIds = await Schedule.find(
+          { travelDate: { $gte: todayUTCStart } },
+          { _id: 1 }
+        ).lean();
+
+        const upcomingIds = upcomingScheduleIds.map((s) => s._id);
+        query.scheduleId = { $in: upcomingIds };
+
+        const bookings = await Booking.find(query)
+          .populate('scheduleId')
+          .populate('busId')
+          .populate('routeId')
+          .sort({ 'scheduleId.travelDate': 1, createdAt: -1 });
+
+        return { success: true, data: bookings };
+      }
+
+      // No status filter — return all bookings for the user
       const bookings = await Booking.find(query)
         .populate('scheduleId')
         .populate('busId')
         .populate('routeId')
         .sort({ createdAt: -1 });
 
-      return {
-        success: true,
-        data: bookings
-      };
+      return { success: true, data: bookings };
     } catch (error) {
       console.error('Error getting user bookings:', error);
       throw error;

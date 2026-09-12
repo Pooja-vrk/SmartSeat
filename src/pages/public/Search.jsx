@@ -44,6 +44,9 @@ const Search = () => {
       const from = searchParams.get('from') || '';
       const to   = searchParams.get('to')   || '';
       const date = searchParams.get('date') || '';
+      const boardingPoint = searchParams.get('boardingPoint') || '';
+      const droppingPoint = searchParams.get('droppingPoint') || '';
+      const passengers = searchParams.get('passengers') || '';
 
       if (!from && !to && !date) {
         setLoading(false);
@@ -53,7 +56,7 @@ const Search = () => {
       setLoading(true);
       setBuses([]);
       setFilteredBuses([]);
-      const params = { from, to, date };
+      const params = { from, to, date, boardingPoint, droppingPoint, passengers };
 
       try {
         const response = await busService.searchBuses(params);
@@ -189,13 +192,19 @@ const Search = () => {
         {/* SEARCH SUMMARY HERO CARD */}
         <div className="search-summary-hero">
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex flex-wrap items-center gap-6">
+            <div className="flex flex-wrap items-center gap-4">
               <div className="flex items-center gap-2">
                 <MapPin className="w-5 h-5 text-cyan-400 animate-pulse" />
                 <span className="font-black text-lg text-white uppercase tracking-wider">
                   {searchParams.get('from') || 'Origin'} <span className="text-cyan-400 font-normal">→</span> {searchParams.get('to') || 'Destination'}
                 </span>
               </div>
+
+              {(searchParams.get('boardingPoint') || searchParams.get('droppingPoint')) && (
+                <div className="flex items-center gap-1.5 px-3 py-1 bg-cyan-950/70 border border-cyan-500/40 rounded-xl text-xs font-semibold text-cyan-300">
+                  <span>Stops: <strong>{searchParams.get('boardingPoint') || searchParams.get('from')}</strong> → <strong>{searchParams.get('droppingPoint') || searchParams.get('to')}</strong></span>
+                </div>
+              )}
               
               {searchParams.get('date') && (
                 <div className="flex items-center gap-2 px-3 py-1 bg-slate-900/80 rounded-xl border border-slate-700 text-xs font-mono text-cyan-300">
@@ -444,6 +453,11 @@ const Search = () => {
                         <div className="text-center">
                           <p className="text-lg font-black text-slate-900">{formatTime(bus.schedule?.departure)}</p>
                           <p className="text-xs font-semibold text-slate-600">{bus.route?.source || bus.route?.from}</p>
+                          {(bus.selectedBoardingPoint || searchParams.get('boardingPoint')) && (
+                            <p className="text-[10px] text-cyan-600 font-bold mt-0.5">
+                              Board: {bus.selectedBoardingPoint?.name || searchParams.get('boardingPoint')}
+                            </p>
+                          )}
                         </div>
                         
                         <div className="flex-1 px-4">
@@ -459,6 +473,11 @@ const Search = () => {
                         <div className="text-center">
                           <p className="text-lg font-black text-slate-900">{formatTime(bus.schedule?.arrival)}</p>
                           <p className="text-xs font-semibold text-slate-600">{bus.route?.destination || bus.route?.to}</p>
+                          {(bus.selectedDroppingPoint || searchParams.get('droppingPoint')) && (
+                            <p className="text-[10px] text-cyan-600 font-bold mt-0.5">
+                              Drop: {bus.selectedDroppingPoint?.name || searchParams.get('droppingPoint')}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -475,16 +494,29 @@ const Search = () => {
                         <span>{bus.availableSeats} seats left</span>
                       </div>
 
-                      <Link to={`/bus/${bus.scheduleId}${searchParams.get('passengers') && Number(searchParams.get('passengers')) > 1 ? `?passengers=${searchParams.get('passengers')}` : ''}`}>
-                        <Button 
-                          variant="primary" 
-                          size="sm" 
-                          icon={Armchair} 
-                          className="bg-gradient-to-r from-cyan-500 to-teal-500 text-slate-950 font-black px-4 py-2 rounded-xl text-xs uppercase tracking-wider shadow-md hover:shadow-cyan-500/20"
-                        >
-                          View Seats
-                        </Button>
-                      </Link>
+                      {(() => {
+                        const linkParams = new URLSearchParams();
+                        if (searchParams.get('from')) linkParams.set('from', searchParams.get('from'));
+                        if (searchParams.get('to')) linkParams.set('to', searchParams.get('to'));
+                        if (searchParams.get('date')) linkParams.set('date', searchParams.get('date'));
+                        if (searchParams.get('boardingPoint')) linkParams.set('boardingPoint', searchParams.get('boardingPoint'));
+                        if (searchParams.get('droppingPoint')) linkParams.set('droppingPoint', searchParams.get('droppingPoint'));
+                        if (searchParams.get('passengers')) linkParams.set('passengers', searchParams.get('passengers'));
+                        const queryString = linkParams.toString() ? `?${linkParams.toString()}` : '';
+
+                        return (
+                          <Link to={`/bus/${bus.scheduleId}${queryString}`}>
+                            <Button 
+                              variant="primary" 
+                              size="sm" 
+                              icon={Armchair} 
+                              className="bg-gradient-to-r from-cyan-500 to-teal-500 text-slate-950 font-black px-4 py-2 rounded-xl text-xs uppercase tracking-wider shadow-md hover:shadow-cyan-500/20"
+                            >
+                              View Seats
+                            </Button>
+                          </Link>
+                        );
+                      })()}
                     </div>
 
                   </div>

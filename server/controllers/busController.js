@@ -12,7 +12,31 @@ const { generateSeatLayout } = require('../utils/seatUtils');
 const MAX_SCHEDULE_HORIZON_DAYS = 365;
 
 const utcDayBounds = (dateValue) => {
-  const searchDate = new Date(dateValue);
+  if (!dateValue) return null;
+  let searchDate;
+
+  if (typeof dateValue === 'string') {
+    const trimmed = dateValue.trim();
+    const ddmmyyyyMatch = trimmed.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+    if (ddmmyyyyMatch) {
+      const day = parseInt(ddmmyyyyMatch[1], 10);
+      const month = parseInt(ddmmyyyyMatch[2], 10) - 1;
+      const year = parseInt(ddmmyyyyMatch[3], 10);
+      searchDate = new Date(Date.UTC(year, month, day));
+    } else {
+      const yyyymmddMatch = trimmed.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
+      if (yyyymmddMatch) {
+        const year = parseInt(yyyymmddMatch[1], 10);
+        const month = parseInt(yyyymmddMatch[2], 10) - 1;
+        const day = parseInt(yyyymmddMatch[3], 10);
+        searchDate = new Date(Date.UTC(year, month, day));
+      }
+    }
+  }
+
+  if (!searchDate || Number.isNaN(searchDate.getTime())) {
+    searchDate = new Date(dateValue);
+  }
   if (Number.isNaN(searchDate.getTime())) return null;
 
   const dayStart = new Date(searchDate);
@@ -44,21 +68,40 @@ const isBeyondHorizon = (dayStart) => {
  */
 const ensureSchedulesForDate = async (routeIds, dateValue) => {
   const bounds = utcDayBounds(dateValue);
-  if (!bounds || !routeIds.length) return;
+  if (!bounds || !routeIds || !routeIds.length) return;
 
   const { dayStart, dayEnd } = bounds;
   if (isPastUtcDay(dayStart) || isBeyondHorizon(dayStart)) return;
 
+  // 1. Check existing schedules for these routes on this travel date
   const existing = await Schedule.find({
     routeId: { $in: routeIds },
     isActive: true,
     travelDate: { $gte: dayStart, $lte: dayEnd }
-  }).select('_id busId departureTime');
+  }).select('_id busId routeId departureTime fare');
+
+  // Verify seat inventories exist for existing schedules
+  for (const s of existing) {
+    const seatCount = await Seat.countDocuments({ scheduleId: s._id });
+    if (seatCount === 0 && s.busId) {
+      const bus = await Bus.findById(s.busId);
+      if (bus && bus.seatConfiguration) {
+        await generateSeatLayout(
+          bus._id,
+          s._id,
+          bus.seatConfiguration,
+          bus.busType,
+          s.fare || 500
+        );
+      }
+    }
+  }
 
   const existingKeys = new Set(
-    existing.map((s) => `${s.busId}_${s.departureTime}`)
+    existing.map((s) => `${s.routeId.toString()}_${s.busId.toString()}_${s.departureTime}`)
   );
 
+  // 2. Fetch template schedules for each route
   const templates = await Schedule.find({
     routeId: { $in: routeIds },
     isActive: true
@@ -67,19 +110,24 @@ const ensureSchedulesForDate = async (routeIds, dateValue) => {
     .sort({ travelDate: 1 });
 
   const uniqueTemplates = new Map();
+  const routesWithTemplates = new Set();
+
   for (const tmpl of templates) {
     if (!tmpl.busId?._id) continue;
-    const key = `${tmpl.busId._id}_${tmpl.departureTime}`;
+    const rId = tmpl.routeId.toString();
+    const key = `${rId}_${tmpl.busId._id.toString()}_${tmpl.departureTime}`;
+    routesWithTemplates.add(rId);
     if (!uniqueTemplates.has(key)) {
       uniqueTemplates.set(key, tmpl);
     }
   }
 
+  // 3. Create missing schedules from templates
   for (const [key, tmpl] of uniqueTemplates.entries()) {
     if (existingKeys.has(key)) continue;
 
     const bus = tmpl.busId;
-    const totalSeats = bus.seatConfiguration?.totalSeats || 0;
+    const totalSeats = bus.seatConfiguration?.totalSeats || 36;
 
     const created = await Schedule.create({
       busId: bus._id,
@@ -99,7 +147,139 @@ const ensureSchedulesForDate = async (routeIds, dateValue) => {
       bus.busType,
       tmpl.fare
     );
+
+    existingKeys.add(key);
   }
+
+  // 4. For any route that has NO existing templates at all, dynamically provision a default service
+  for (const rId of routeIds) {
+    const rIdStr = rId.toString();
+    const hasAnyScheduleOnDate = Array.from(existingKeys).some((k) => k.startsWith(`${rIdStr}_`));
+    if (!hasAnyScheduleOnDate) {
+      const defaultBus = await Bus.findOne({ isActive: true });
+      if (defaultBus) {
+        const totalSeats = defaultBus.seatConfiguration?.totalSeats || 36;
+        const fare = 500;
+        const created = await Schedule.create({
+          busId: defaultBus._id,
+          routeId: rId,
+          departureTime: '21:00',
+          arrivalTime: '06:00',
+          travelDate: dayStart,
+          fare,
+          isActive: true,
+          availableSeats: totalSeats
+        });
+
+        await generateSeatLayout(
+          defaultBus._id,
+          created._id,
+          defaultBus.seatConfiguration,
+          defaultBus.busType,
+          fare
+        );
+
+        existingKeys.add(`${rIdStr}_${defaultBus._id.toString()}_21:00`);
+      }
+    }
+  }
+};
+
+/**
+ * Normalize and sort route stops into a complete, ordered sequence.
+ */
+const normalizeRouteStops = (route) => {
+  if (!route) return [];
+
+  // If route.stops has structured stop objects with sequence
+  if (
+    Array.isArray(route.stops) &&
+    route.stops.length > 0 &&
+    typeof route.stops[0] === 'object' &&
+    route.stops[0] !== null &&
+    route.stops[0].name
+  ) {
+    const sorted = [...route.stops].sort(
+      (a, b) => (Number(a.sequence) || 0) - (Number(b.sequence) || 0)
+    );
+    return sorted.map((s, idx) => {
+      const type = s.type || (idx === 0 ? 'pickup' : idx === sorted.length - 1 ? 'drop' : 'both');
+      const isBoarding = s.isBoarding !== undefined ? Boolean(s.isBoarding) : (type === 'pickup' || type === 'both' || idx < sorted.length - 1);
+      const isDropping = s.isDropping !== undefined ? Boolean(s.isDropping) : (type === 'drop' || type === 'both' || idx > 0);
+      return {
+        stopId: s._id || s.stopId || null,
+        _id: s._id || s.stopId || null,
+        name: s.name ? String(s.name).trim() : '',
+        city: s.city ? String(s.city).trim() : (s.name ? String(s.name).trim() : ''),
+        type,
+        isBoarding,
+        isDropping,
+        sequence: Number(s.sequence) || (idx + 1),
+        arrivalTime: s.arrivalTime || null,
+        departureTime: s.departureTime || null
+      };
+    });
+  }
+
+  // If route.stops is an array of strings or empty
+  const rawStops = Array.isArray(route.stops)
+    ? route.stops
+        .map((s) => (typeof s === 'string' ? s.trim() : (s?.name ? String(s.name).trim() : '')))
+        .filter(Boolean)
+    : [];
+
+  const stopsList = [];
+  let seq = 1;
+
+  const sourceName = route.source ? route.source.trim() : 'Origin';
+  stopsList.push({
+    stopId: null,
+    _id: null,
+    name: sourceName,
+    city: sourceName,
+    type: 'pickup',
+    isBoarding: true,
+    isDropping: false,
+    sequence: seq++,
+    arrivalTime: null,
+    departureTime: null
+  });
+
+  for (const stopName of rawStops) {
+    if (
+      stopName.toLowerCase() !== sourceName.toLowerCase() &&
+      stopName.toLowerCase() !== (route.destination || '').trim().toLowerCase()
+    ) {
+      stopsList.push({
+        stopId: null,
+        _id: null,
+        name: stopName,
+        city: stopName,
+        type: 'both',
+        isBoarding: true,
+        isDropping: true,
+        sequence: seq++,
+        arrivalTime: null,
+        departureTime: null
+      });
+    }
+  }
+
+  const destName = route.destination ? route.destination.trim() : 'Destination';
+  stopsList.push({
+    stopId: null,
+    _id: null,
+    name: destName,
+    city: destName,
+    type: 'drop',
+    isBoarding: false,
+    isDropping: true,
+    sequence: seq++,
+    arrivalTime: null,
+    departureTime: null
+  });
+
+  return stopsList;
 };
 
 // ============================================================
@@ -111,6 +291,8 @@ exports.searchBuses = asyncHandler(async (req, res) => {
   const {
     from,
     to,
+    boardingPoint,
+    droppingPoint,
     date,
     busType,
     acType,
@@ -138,7 +320,76 @@ exports.searchBuses = asyncHandler(async (req, res) => {
 
   const routes = await Route.find(routeQuery);
 
-  const routeIds = routes.map((route) => route._id);
+  if (routes.length === 0) {
+    return res.status(200).json({
+      success: true,
+      data: []
+    });
+  }
+
+  // Filter routes based on boardingPoint and droppingPoint if specified
+  const validRoutes = [];
+  const routeStopDetailsMap = {};
+
+  for (const route of routes) {
+    const stops = normalizeRouteStops(route);
+    let isValidRoute = true;
+    let selectedBoardingStop = null;
+    let selectedDroppingStop = null;
+
+    if (boardingPoint) {
+      const bp = String(boardingPoint).trim().toLowerCase();
+      selectedBoardingStop = stops.find(
+        (s) =>
+          (s.stopId && String(s.stopId).toLowerCase() === bp) ||
+          (s._id && String(s._id).toLowerCase() === bp) ||
+          s.name.toLowerCase() === bp ||
+          s.city.toLowerCase() === bp
+      );
+      if (!selectedBoardingStop) {
+        isValidRoute = false;
+      }
+    }
+
+    if (droppingPoint) {
+      const dp = String(droppingPoint).trim().toLowerCase();
+      selectedDroppingStop = stops.find(
+        (s) =>
+          (s.stopId && String(s.stopId).toLowerCase() === dp) ||
+          (s._id && String(s._id).toLowerCase() === dp) ||
+          s.name.toLowerCase() === dp ||
+          s.city.toLowerCase() === dp
+      );
+      if (!selectedDroppingStop) {
+        isValidRoute = false;
+      }
+    }
+
+    if (selectedBoardingStop && selectedDroppingStop) {
+      if (Number(selectedBoardingStop.sequence) >= Number(selectedDroppingStop.sequence)) {
+        isValidRoute = false;
+      }
+    }
+
+    if (isValidRoute) {
+      validRoutes.push(route);
+      routeStopDetailsMap[route._id.toString()] = {
+        boardingStop: selectedBoardingStop,
+        droppingStop: selectedDroppingStop,
+        stops
+      };
+    }
+  }
+
+  // If user searched specific boarding and/or dropping points and no route matches sequence/existence
+  if ((boardingPoint || droppingPoint) && validRoutes.length === 0 && from && to) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid boarding or dropping point for this route'
+    });
+  }
+
+  const routeIds = validRoutes.map((route) => route._id);
 
   if (routeIds.length === 0) {
     return res.status(200).json({
@@ -239,77 +490,102 @@ exports.searchBuses = asyncHandler(async (req, res) => {
         schedule.busId &&
         schedule.routeId
     )
-    .map((schedule) => ({
-      id: schedule.busId._id,
+    .map((schedule) => {
+      const rId = schedule.routeId._id?.toString() || schedule.routeId.toString();
+      const stopInfo = routeStopDetailsMap[rId] || {};
+      const boardingStop = stopInfo.boardingStop || null;
+      const droppingStop = stopInfo.droppingStop || null;
 
-      operator: schedule.busId.operatorName,
+      return {
+        id: schedule.busId._id,
 
-      busNumber: schedule.busId.busNumber,
+        operator: schedule.busId.operatorName,
 
-      busType: schedule.busId.busType,
+        busNumber: schedule.busId.busNumber,
 
-      route: {
-        from: schedule.routeId.source,
-        to: schedule.routeId.destination,
-        source: schedule.routeId.source,
-        destination: schedule.routeId.destination,
-        distance: schedule.routeId.distance,
-        estimatedDuration:
-          schedule.routeId.estimatedDuration
-      },
+        busType: schedule.busId.busType,
 
-      schedule: {
-        departure:
-          `${schedule.travelDate
-            .toISOString()
-            .split('T')[0]}T${schedule.departureTime}`,
+        route: {
+          from: schedule.routeId.source,
+          to: schedule.routeId.destination,
+          source: schedule.routeId.source,
+          destination: schedule.routeId.destination,
+          distance: schedule.routeId.distance,
+          estimatedDuration:
+            schedule.routeId.estimatedDuration
+        },
 
-        arrival:
-          `${schedule.travelDate
-            .toISOString()
-            .split('T')[0]}T${schedule.arrivalTime}`,
+        schedule: {
+          departure:
+            `${schedule.travelDate
+              .toISOString()
+              .split('T')[0]}T${boardingStop?.departureTime || schedule.departureTime}`,
 
-        departureTime: schedule.departureTime,
+          arrival:
+            `${schedule.travelDate
+              .toISOString()
+              .split('T')[0]}T${droppingStop?.arrivalTime || schedule.arrivalTime}`,
 
-        arrivalTime: schedule.arrivalTime,
+          departureTime: boardingStop?.departureTime || schedule.departureTime,
 
-        duration:
-          schedule.routeId.estimatedDuration,
+          arrivalTime: droppingStop?.arrivalTime || schedule.arrivalTime,
 
-        fare: schedule.fare
-      },
+          duration:
+            schedule.routeId.estimatedDuration,
 
-      travelDate: schedule.travelDate,
+          fare: schedule.fare
+        },
 
-      departureTime: schedule.departureTime,
+        travelDate: schedule.travelDate,
 
-      arrivalTime: schedule.arrivalTime,
+        departureTime: boardingStop?.departureTime || schedule.departureTime,
 
-      fare: schedule.fare,
+        arrivalTime: droppingStop?.arrivalTime || schedule.arrivalTime,
 
-      availableSeats:
-        schedule.availableSeats,
+        fare: schedule.fare,
 
-      totalSeats:
-        schedule.busId.seatConfiguration.totalSeats,
+        availableSeats:
+          schedule.availableSeats,
 
-      seatConfiguration:
-        schedule.busId.seatConfiguration,
+        totalSeats:
+          schedule.busId.seatConfiguration.totalSeats,
 
-      amenities:
-        schedule.busId.amenities,
+        seatConfiguration:
+          schedule.busId.seatConfiguration,
 
-      boardingPoints:
-        schedule.busId.boardingPoints,
+        amenities:
+          schedule.busId.amenities,
 
-      droppingPoints:
-        schedule.busId.droppingPoints,
+        boardingPoints:
+          schedule.busId.boardingPoints && schedule.busId.boardingPoints.length > 0
+            ? schedule.busId.boardingPoints
+            : (stopInfo.stops ? stopInfo.stops.filter(s => s.type !== 'drop').map(s => s.name) : [schedule.routeId.source]),
 
-      rating:
-        schedule.busId.rating,
+        droppingPoints:
+          schedule.busId.droppingPoints && schedule.busId.droppingPoints.length > 0
+            ? schedule.busId.droppingPoints
+            : (stopInfo.stops ? stopInfo.stops.filter(s => s.type !== 'pickup').map(s => s.name) : [schedule.routeId.destination]),
 
-      scheduleId: schedule._id
-    }));
+        selectedBoardingPoint: boardingStop ? {
+          stopId: boardingStop.stopId || boardingStop._id,
+          name: boardingStop.name,
+          city: boardingStop.city,
+          time: boardingStop.departureTime || schedule.departureTime
+        } : null,
+
+        selectedDroppingPoint: droppingStop ? {
+          stopId: droppingStop.stopId || droppingStop._id,
+          name: droppingStop.name,
+          city: droppingStop.city,
+          time: droppingStop.arrivalTime || schedule.arrivalTime
+        } : null,
+
+        rating:
+          schedule.busId.rating,
+
+        scheduleId: schedule._id
+      };
+    });
 
   return res.status(200).json({
     success: true,
@@ -596,3 +872,69 @@ exports.getRoutes = asyncHandler(async (req, res) => {
     data: routes
   });
 });
+
+// ============================================================
+// GET ROUTE STOPS
+// GET /api/buses/routes/stops?from=...&to=...
+// GET /api/buses/routes/:id/stops
+// ============================================================
+
+exports.getRouteStops = asyncHandler(async (req, res) => {
+  const { from, to } = req.query;
+  const { id } = req.params;
+
+  let route = null;
+
+  if (id && mongoose.isValidObjectId(id)) {
+    route = await Route.findById(id);
+  } else if (from && to) {
+    route = await Route.findOne({
+      source: { $regex: `^${from.trim()}$`, $options: 'i' },
+      destination: { $regex: `^${to.trim()}$`, $options: 'i' },
+      isActive: true
+    });
+
+    if (!route) {
+      route = await Route.findOne({
+        source: { $regex: from.trim(), $options: 'i' },
+        destination: { $regex: to.trim(), $options: 'i' },
+        isActive: true
+      });
+    }
+  }
+
+  if (!route) {
+    return res.status(404).json({
+      success: false,
+      message: 'Route not found'
+    });
+  }
+
+  const stops = normalizeRouteStops(route);
+
+  return res.status(200).json({
+    success: true,
+    route: {
+      id: route._id,
+      _id: route._id,
+      source: route.source,
+      destination: route.destination,
+      distance: route.distance,
+      estimatedDuration: route.estimatedDuration
+    },
+    stops,
+    data: {
+      route: {
+        id: route._id,
+        _id: route._id,
+        source: route.source,
+        destination: route.destination,
+        distance: route.distance,
+        estimatedDuration: route.estimatedDuration
+      },
+      stops
+    }
+  });
+});
+
+exports.normalizeRouteStops = normalizeRouteStops;

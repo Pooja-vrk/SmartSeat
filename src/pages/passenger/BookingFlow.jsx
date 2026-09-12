@@ -202,6 +202,7 @@ const BookingFlow = () => {
     selectSeat,
     selectBus,
     clearBooking,
+    searchParams,
   } = useBooking();
 
   const {
@@ -812,6 +813,9 @@ const BookingFlow = () => {
           ? details
           : (multiPassengerDetails[i] || details);
 
+        const boardingPointToUse = urlSearchParams.get('boardingPoint') || searchParams?.boardingPoint || undefined;
+        const droppingPointToUse = urlSearchParams.get('droppingPoint') || searchParams?.droppingPoint || undefined;
+
         const bookingData = {
           scheduleId: scheduleIdToUse,
           seatNumber: seatNum,
@@ -823,6 +827,8 @@ const BookingFlow = () => {
             email:  paxDetails?.email || '',
           },
           smartSeatMonitoring: isMonitoringEnabled(scheduleIdToUse),
+          ...(boardingPointToUse ? { boardingPoint: boardingPointToUse } : {}),
+          ...(droppingPointToUse ? { droppingPoint: droppingPointToUse } : {}),
         };
 
         let response;
@@ -924,6 +930,10 @@ const BookingFlow = () => {
 
     const from  = route?.source || route?.from || 'N/A';
     const to    = route?.destination || route?.to || 'N/A';
+    const boardingPointName = b.boardingPoint?.name || b.boardingPoint || from;
+    const droppingPointName = b.droppingPoint?.name || b.droppingPoint || to;
+    const boardingTime = b.boardingPoint?.time || schedule?.departureTime || 'N/A';
+    const droppingTime = b.droppingPoint?.time || schedule?.arrivalTime || 'N/A';
     const busNo = bus?.busNumber || 'N/A';
     const operator = bus?.operatorName || 'N/A';
 
@@ -962,6 +972,10 @@ const BookingFlow = () => {
       '-- JOURNEY INFORMATION -----------------',
       `From:          ${from}`,
       `To:            ${to}`,
+      `Boarding Point:${boardingPointName}`,
+      `Boarding Time: ${boardingTime}`,
+      `Dropping Point:${droppingPointName}`,
+      `Dropping Time: ${droppingTime}`,
       `Date:          ${travelDate}`,
       `Departure:     ${schedule?.departureTime || 'N/A'}`,
       `Arrival:       ${schedule?.arrivalTime   || 'N/A'}`,
@@ -1011,6 +1025,10 @@ const BookingFlow = () => {
 
     const from  = route?.source || route?.from || 'N/A';
     const to    = route?.destination || route?.to || 'N/A';
+    const boardingPointName = b.boardingPoint?.name || b.boardingPoint || from;
+    const droppingPointName = b.droppingPoint?.name || b.droppingPoint || to;
+    const boardingTime = b.boardingPoint?.time || schedule?.departureTime || 'N/A';
+    const droppingTime = b.droppingPoint?.time || schedule?.arrivalTime || 'N/A';
     const date  = schedule?.travelDate
       ? new Date(schedule.travelDate).toLocaleDateString('en-IN')
       : 'N/A';
@@ -1022,6 +1040,10 @@ const BookingFlow = () => {
       `SmartSeat Booking Ticket\n` +
       `Booking ID: ${b.bookingId || b._id || 'N/A'}\n` +
       `Route: ${from} → ${to}\n` +
+      `Boarding Point: ${boardingPointName}\n` +
+      `Boarding Time: ${boardingTime}\n` +
+      `Dropping Point: ${droppingPointName}\n` +
+      `Dropping Time: ${droppingTime}\n` +
       `Date: ${date}\n` +
       `Bus: ${bus?.busNumber || 'N/A'}\n` +
       `Seat: ${b.seatNumber || 'N/A'}\n` +
@@ -1533,6 +1555,8 @@ const BookingFlow = () => {
             passengerDetails={passengerDetails}
             multiPassengerDetails={passengerCount > 1 ? multiPassengerDetails : undefined}
             smartSeatMonitoring={isMonitoringEnabled(currentScheduleId)}
+            boardingPoint={urlSearchParams.get('boardingPoint') || searchParams?.boardingPoint}
+            droppingPoint={urlSearchParams.get('droppingPoint') || searchParams?.droppingPoint}
           />
 
           {/* COMPLETE */}

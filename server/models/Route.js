@@ -1,5 +1,35 @@
 const mongoose = require('mongoose');
 
+const stopSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: [true, 'Please provide stop name'],
+    trim: true
+  },
+  city: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  type: {
+    type: String,
+    enum: ['pickup', 'drop', 'both'],
+    default: 'both'
+  },
+  sequence: {
+    type: Number,
+    required: [true, 'Please provide stop sequence']
+  },
+  arrivalTime: {
+    type: String,
+    default: null
+  },
+  departureTime: {
+    type: String,
+    default: null
+  }
+}, { _id: true });
+
 const routeSchema = new mongoose.Schema({
   source: {
     type: String,
@@ -11,10 +41,7 @@ const routeSchema = new mongoose.Schema({
     required: [true, 'Please provide destination city'],
     trim: true
   },
-  stops: [{
-    type: String,
-    trim: true
-  }],
+  stops: [stopSchema],
   distance: {
     type: Number,
     required: [true, 'Please provide distance in km']

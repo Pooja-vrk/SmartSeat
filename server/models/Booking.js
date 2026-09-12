@@ -57,6 +57,46 @@ const bookingSchema = new mongoose.Schema({
       match: [/^[0-9]{10}$/, 'Please provide a valid 10-digit phone number']
     }
   },
+  boardingPoint: {
+    stopId: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null
+    },
+    name: {
+      type: String,
+      default: null,
+      trim: true
+    },
+    city: {
+      type: String,
+      default: null,
+      trim: true
+    },
+    time: {
+      type: String,
+      default: null
+    }
+  },
+  droppingPoint: {
+    stopId: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null
+    },
+    name: {
+      type: String,
+      default: null,
+      trim: true
+    },
+    city: {
+      type: String,
+      default: null,
+      trim: true
+    },
+    time: {
+      type: String,
+      default: null
+    }
+  },
   baseFare: {
     type: Number,
     required: true,

@@ -56,6 +56,10 @@ const TicketPage = () => {
 
     const from  = route?.source || route?.from || 'N/A';
     const to    = route?.destination || route?.to || 'N/A';
+    const boardingPointName = (typeof b.boardingPoint === 'object' ? b.boardingPoint?.name : b.boardingPoint) || from;
+    const droppingPointName = (typeof b.droppingPoint === 'object' ? b.droppingPoint?.name : b.droppingPoint) || to;
+    const boardingTime = (typeof b.boardingPoint === 'object' ? b.boardingPoint?.time : null) || schedule?.departureTime || 'N/A';
+    const droppingTime = (typeof b.droppingPoint === 'object' ? b.droppingPoint?.time : null) || schedule?.arrivalTime || 'N/A';
     const busNo = bus?.busNumber || 'N/A';
     const operator = bus?.operatorName || 'N/A';
 
@@ -95,6 +99,10 @@ const TicketPage = () => {
       '-- JOURNEY INFORMATION -----------------',
       `From:          ${from}`,
       `To:            ${to}`,
+      `Boarding Point:${boardingPointName}`,
+      `Boarding Time: ${boardingTime}`,
+      `Dropping Point:${droppingPointName}`,
+      `Dropping Time: ${droppingTime}`,
       `Date:          ${travelDate}`,
       `Departure:     ${schedule?.departureTime || 'N/A'}`,
       `Arrival:       ${schedule?.arrivalTime   || 'N/A'}`,
@@ -146,6 +154,10 @@ const TicketPage = () => {
 
     const from  = route?.source || route?.from || 'N/A';
     const to    = route?.destination || route?.to || 'N/A';
+    const boardingPointName = (typeof b.boardingPoint === 'object' ? b.boardingPoint?.name : b.boardingPoint) || from;
+    const droppingPointName = (typeof b.droppingPoint === 'object' ? b.droppingPoint?.name : b.droppingPoint) || to;
+    const boardingTime = (typeof b.boardingPoint === 'object' ? b.boardingPoint?.time : null) || schedule?.departureTime || 'N/A';
+    const droppingTime = (typeof b.droppingPoint === 'object' ? b.droppingPoint?.time : null) || schedule?.arrivalTime || 'N/A';
     const date  = schedule?.travelDate
       ? new Date(schedule.travelDate).toLocaleDateString('en-IN')
       : 'N/A';
@@ -157,6 +169,10 @@ const TicketPage = () => {
       `SmartSeat Booking Ticket\n` +
       `Booking ID: ${b.bookingId || b._id || 'N/A'}\n` +
       `Route: ${from} → ${to}\n` +
+      `Boarding Point: ${boardingPointName}\n` +
+      `Boarding Time: ${boardingTime}\n` +
+      `Dropping Point: ${droppingPointName}\n` +
+      `Dropping Time: ${droppingTime}\n` +
       `Date: ${date}\n` +
       `Bus: ${bus?.busNumber || 'N/A'}\n` +
       `Seat: ${b.seatNumber || 'N/A'}\n` +

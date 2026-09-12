@@ -170,11 +170,16 @@ const ChangeSeat = () => {
                 
                 <div className="flex items-center space-x-2">
                   <MapPin className="w-4 h-4 text-gray-500" />
-                  <span className="text-sm text-gray-600">Route</span>
+                  <span className="text-sm text-gray-600">Route & Stops</span>
                 </div>
                 <p className="font-medium text-gray-900">
                   {booking.routeId?.source || 'N/A'} → {booking.routeId?.destination || 'N/A'}
                 </p>
+                {(booking.boardingPoint || booking.droppingPoint) && (
+                  <p className="text-xs text-cyan-700 font-semibold">
+                    Stops: {(typeof booking.boardingPoint === 'object' ? booking.boardingPoint?.name : booking.boardingPoint) || booking.routeId?.source} → {(typeof booking.droppingPoint === 'object' ? booking.droppingPoint?.name : booking.droppingPoint) || booking.routeId?.destination}
+                  </p>
+                )}
                 
                 <div className="flex items-center space-x-2">
                   <Calendar className="w-4 h-4 text-gray-500" />

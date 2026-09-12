@@ -7,13 +7,32 @@ const {
   searchBuses,
   getBus,
   getBusSeats,
-  getRoutes
+  getRoutes,
+  getRouteStops
 } = require('../controllers/busController');
 
 // ============================================================
 // IMPORTANT
 // Static routes must be registered before /:id
 // ============================================================
+
+// GET /api/buses/routes/stops?from=...&to=...
+router.get(
+  '/routes/stops',
+  getRouteStops
+);
+
+// GET /api/buses/routes/:id/stops
+router.get(
+  '/routes/:id/stops',
+  getRouteStops
+);
+
+// GET /api/buses/stops?from=...&to=... (alias)
+router.get(
+  '/stops',
+  getRouteStops
+);
 
 // GET /api/buses/routes
 router.get(

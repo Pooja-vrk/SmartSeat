@@ -139,17 +139,28 @@ const Ticket = ({ booking, onDownload, onShare }) => {
   // BOARDING INFORMATION
   // ==========================================================
 
+  const boardingPointObj = safeBooking?.boardingPoint;
+  const droppingPointObj = safeBooking?.droppingPoint;
+
   const boardingPoint =
-    safeBooking?.boardingPoint ||
+    (typeof boardingPointObj === 'object' ? boardingPointObj?.name : boardingPointObj) ||
     safeBooking?.boarding ||
     from ||
     'N/A';
 
   const droppingPoint =
-    safeBooking?.droppingPoint ||
+    (typeof droppingPointObj === 'object' ? droppingPointObj?.name : droppingPointObj) ||
     safeBooking?.dropping ||
     to ||
     'N/A';
+
+  const boardingTime =
+    (typeof boardingPointObj === 'object' ? boardingPointObj?.time : null) ||
+    '';
+
+  const droppingTime =
+    (typeof droppingPointObj === 'object' ? droppingPointObj?.time : null) ||
+    '';
 
   // ==========================================================
   // SMARTSEAT
@@ -681,25 +692,28 @@ const Ticket = ({ booking, onDownload, onShare }) => {
             </div>
 
             <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-
-              <div className="flex items-center space-x-2 mb-1">
-
-                <MapPin className="w-4 h-4 text-gray-600" />
-
-                <p className="text-xs text-gray-700">
-                  Boarding
+              <div className="flex items-center space-x-2 mb-2">
+                <MapPin className="w-4 h-4 text-cyan-600" />
+                <p className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                  Boarding & Dropping
                 </p>
-
               </div>
 
-              <p className="font-semibold text-gray-900">
-                {boardingPoint}
-              </p>
+              <div className="space-y-2 text-xs">
+                <div>
+                  <span className="text-[10px] text-slate-500 uppercase font-bold block">BOARDING POINT</span>
+                  <span className="font-bold text-slate-900 text-sm">
+                    {boardingPoint} {boardingTime ? <span className="text-xs font-mono font-semibold text-cyan-700">({boardingTime})</span> : ''}
+                  </span>
+                </div>
 
-              <p className="text-xs text-gray-600">
-                Dropping: {droppingPoint}
-              </p>
-
+                <div>
+                  <span className="text-[10px] text-slate-500 uppercase font-bold block">DROPPING POINT</span>
+                  <span className="font-bold text-slate-900 text-sm">
+                    {droppingPoint} {droppingTime ? <span className="text-xs font-mono font-semibold text-teal-700">({droppingTime})</span> : ''}
+                  </span>
+                </div>
+              </div>
             </div>
 
           </div>

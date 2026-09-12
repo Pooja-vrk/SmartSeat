@@ -78,31 +78,96 @@ const BUS_TEMPLATES = [
 // ROUTE DEFINITIONS  — 22 routes (18 original + 4 new)
 // ─────────────────────────────────────────────────────────────
 
-const ROUTE_DEFS = [
-  { source: 'Bengaluru',   destination: 'Chennai',            stops: ['Krishnagiri','Vellore'],          distance: 345, duration: '6h 00m' },
-  { source: 'Bengaluru',   destination: 'Hyderabad',          stops: ['Kurnool','Mantralayam'],          distance: 570, duration: '9h 30m' },
-  { source: 'Bengaluru',   destination: 'Mysuru',             stops: ['Mandya'],                          distance: 145, duration: '3h 00m' },
-  { source: 'Bengaluru',   destination: 'Kochi',              stops: ['Salem','Coimbatore'],             distance: 545, duration: '9h 00m' },
-  { source: 'Bengaluru',   destination: 'Mangaluru',          stops: ['Hassan','Sakleshpur'],            distance: 352, duration: '7h 00m' },
-  { source: 'Chennai',     destination: 'Bengaluru',          stops: ['Vellore','Krishnagiri'],          distance: 345, duration: '6h 00m' },
-  { source: 'Chennai',     destination: 'Coimbatore',         stops: ['Vellore','Salem'],                distance: 495, duration: '8h 30m' },
-  { source: 'Chennai',     destination: 'Madurai',            stops: ['Trichy'],                          distance: 463, duration: '7h 30m' },
-  { source: 'Hyderabad',   destination: 'Bengaluru',          stops: ['Kurnool'],                        distance: 570, duration: '9h 30m' },
-  { source: 'Hyderabad',   destination: 'Vijayawada',         stops: ['Guntur'],                         distance: 275, duration: '5h 00m' },
-  { source: 'Mumbai',      destination: 'Pune',               stops: ['Thane','Lonavala'],               distance: 150, duration: '3h 30m' },
-  { source: 'Mumbai',      destination: 'Goa',                stops: ['Alibaug','Ratnagiri'],            distance: 594, duration: '10h 00m' },
-  { source: 'Pune',        destination: 'Mumbai',             stops: ['Lonavala','Thane'],               distance: 150, duration: '3h 30m' },
-  { source: 'Delhi',       destination: 'Jaipur',             stops: ['Gurgaon','Manesar'],              distance: 280, duration: '5h 30m' },
-  { source: 'Delhi',       destination: 'Chandigarh',         stops: ['Panipat','Ambala'],               distance: 250, duration: '4h 30m' },
-  { source: 'Kochi',       destination: 'Thiruvananthapuram', stops: ['Kollam'],                          distance: 210, duration: '4h 00m' },
-  { source: 'Kochi',       destination: 'Kozhikode',          stops: ['Thrissur','Malappuram'],          distance: 190, duration: '4h 30m' },
-  { source: 'Coimbatore',  destination: 'Bengaluru',          stops: ['Hosur'],                          distance: 360, duration: '6h 30m' },
+// Helper to build structured stops for any route
+function makeStops(source, destination, intermediate = []) {
+  const stops = [];
+  let seq = 1;
 
-  // ── NEW ROUTES (were missing, causing "0 buses" for these city pairs) ──
-  { source: 'Coimbatore',  destination: 'Chennai',            stops: ['Salem','Vellore'],                distance: 495, duration: '8h 30m' },
-  { source: 'Coimbatore',  destination: 'Hyderabad',          stops: ['Bengaluru','Kurnool'],            distance: 930, duration: '14h 00m' },
-  { source: 'Chennai',     destination: 'Hyderabad',          stops: ['Nellore','Ongole'],               distance: 628, duration: '10h 00m' },
-  { source: 'Hyderabad',   destination: 'Chennai',            stops: ['Ongole','Nellore'],               distance: 628, duration: '10h 00m' },
+  // Pickup stop 1 (Source Main)
+  stops.push({
+    name: `${source} Main`,
+    city: source,
+    type: 'pickup',
+    sequence: seq++,
+    arrivalTime: null,
+    departureTime: null
+  });
+
+  // Pickup stop 2 (Source Outer/Junction)
+  if (source === 'Hyderabad') {
+    stops.push({ name: 'LB Nagar', city: 'Hyderabad', type: 'pickup', sequence: seq++, arrivalTime: null, departureTime: null });
+  } else if (source === 'Bengaluru' || source === 'Bangalore') {
+    stops.push({ name: 'Electronic City', city: 'Bengaluru', type: 'pickup', sequence: seq++, arrivalTime: null, departureTime: null });
+  } else if (source === 'Chennai') {
+    stops.push({ name: 'Guindy', city: 'Chennai', type: 'pickup', sequence: seq++, arrivalTime: null, departureTime: null });
+  }
+
+  // Intermediate stops
+  for (const item of intermediate) {
+    const name = typeof item === 'string' ? item : item.name;
+    const city = typeof item === 'string' ? item : (item.city || item.name);
+    stops.push({
+      name,
+      city,
+      type: 'both',
+      sequence: seq++,
+      arrivalTime: null,
+      departureTime: null
+    });
+  }
+
+  // Dropping stop 1 (Destination Main)
+  const destMainName = destination === 'Chennai' ? 'CMBT'
+    : destination === 'Hyderabad' ? 'MGBS'
+    : destination === 'Bengaluru' || destination === 'Bangalore' ? 'Majestic'
+    : `${destination} Central`;
+
+  stops.push({
+    name: destMainName,
+    city: destination,
+    type: 'drop',
+    sequence: seq++,
+    arrivalTime: null,
+    departureTime: null
+  });
+
+  // Dropping stop 2 (Destination Outer)
+  if (destination === 'Chennai') {
+    stops.push({ name: 'Tambaram', city: 'Chennai', type: 'drop', sequence: seq++, arrivalTime: null, departureTime: null });
+  } else if (destination === 'Hyderabad') {
+    stops.push({ name: 'Ameerpet', city: 'Hyderabad', type: 'drop', sequence: seq++, arrivalTime: null, departureTime: null });
+  } else if (destination === 'Bengaluru' || destination === 'Bangalore') {
+    stops.push({ name: 'Hebbal', city: 'Bengaluru', type: 'drop', sequence: seq++, arrivalTime: null, departureTime: null });
+  }
+
+  return stops;
+}
+
+const ROUTE_DEFS = [
+  { source: 'Bengaluru',   destination: 'Chennai',            stops: makeStops('Bengaluru', 'Chennai', ['Hosur', 'Krishnagiri', 'Vellore']),          distance: 345, duration: '6h 00m' },
+  { source: 'Bengaluru',   destination: 'Hyderabad',          stops: makeStops('Bengaluru', 'Hyderabad', ['Anantapur', 'Kurnool']),                   distance: 570, duration: '9h 30m' },
+  { source: 'Bengaluru',   destination: 'Mysuru',             stops: makeStops('Bengaluru', 'Mysuru', ['Mandya']),                                     distance: 145, duration: '3h 00m' },
+  { source: 'Bengaluru',   destination: 'Kochi',              stops: makeStops('Bengaluru', 'Kochi', ['Salem', 'Coimbatore', 'Thrissur']),             distance: 545, duration: '9h 00m' },
+  { source: 'Bengaluru',   destination: 'Mangaluru',          stops: makeStops('Bengaluru', 'Mangaluru', ['Hassan', 'Sakleshpur']),                    distance: 352, duration: '7h 00m' },
+  { source: 'Chennai',     destination: 'Bengaluru',          stops: makeStops('Chennai', 'Bengaluru', ['Vellore', 'Krishnagiri', 'Hosur']),          distance: 345, duration: '6h 00m' },
+  { source: 'Chennai',     destination: 'Coimbatore',         stops: makeStops('Chennai', 'Coimbatore', ['Vellore', 'Salem', 'Erode']),                distance: 495, duration: '8h 30m' },
+  { source: 'Chennai',     destination: 'Madurai',            stops: makeStops('Chennai', 'Madurai', ['Villupuram', 'Trichy']),                       distance: 463, duration: '7h 30m' },
+  { source: 'Hyderabad',   destination: 'Bengaluru',          stops: makeStops('Hyderabad', 'Bengaluru', ['Kurnool', 'Anantapur']),                   distance: 570, duration: '9h 30m' },
+  { source: 'Hyderabad',   destination: 'Vijayawada',         stops: makeStops('Hyderabad', 'Vijayawada', ['Suryapet', 'Guntur']),                    distance: 275, duration: '5h 00m' },
+  { source: 'Mumbai',      destination: 'Pune',               stops: makeStops('Mumbai', 'Pune', ['Thane', 'Lonavala']),                              distance: 150, duration: '3h 30m' },
+  { source: 'Mumbai',      destination: 'Goa',                stops: makeStops('Mumbai', 'Goa', ['Alibaug', 'Ratnagiri', 'Panaji']),                   distance: 594, duration: '10h 00m' },
+  { source: 'Pune',        destination: 'Mumbai',             stops: makeStops('Pune', 'Mumbai', ['Lonavala', 'Thane', 'Dadar']),                     distance: 150, duration: '3h 30m' },
+  { source: 'Delhi',       destination: 'Jaipur',             stops: makeStops('Delhi', 'Jaipur', ['Gurgaon', 'Manesar', 'Kotputli']),                distance: 280, duration: '5h 30m' },
+  { source: 'Delhi',       destination: 'Chandigarh',         stops: makeStops('Delhi', 'Chandigarh', ['Panipat', 'Karnal', 'Ambala']),               distance: 250, duration: '4h 30m' },
+  { source: 'Kochi',       destination: 'Thiruvananthapuram', stops: makeStops('Kochi', 'Thiruvananthapuram', ['Alappuzha', 'Kollam']),               distance: 210, duration: '4h 00m' },
+  { source: 'Kochi',       destination: 'Kozhikode',          stops: makeStops('Kochi', 'Kozhikode', ['Thrissur', 'Malappuram']),                     distance: 190, duration: '4h 30m' },
+  { source: 'Coimbatore',  destination: 'Bengaluru',          stops: makeStops('Coimbatore', 'Bengaluru', ['Salem', 'Hosur']),                         distance: 360, duration: '6h 30m' },
+
+  // ── IMPORTANT HIGH-DEMAND ROUTES ──
+  { source: 'Coimbatore',  destination: 'Chennai',            stops: makeStops('Coimbatore', 'Chennai', ['Erode', 'Salem', 'Vellore']),               distance: 495, duration: '8h 30m' },
+  { source: 'Coimbatore',  destination: 'Hyderabad',          stops: makeStops('Coimbatore', 'Hyderabad', ['Salem', 'Bengaluru', 'Kurnool']),          distance: 930, duration: '14h 00m' },
+  { source: 'Chennai',     destination: 'Hyderabad',          stops: makeStops('Chennai', 'Hyderabad', ['Nellore', 'Ongole', 'Vijayawada']),          distance: 628, duration: '10h 00m' },
+  { source: 'Hyderabad',   destination: 'Chennai',            stops: makeStops('Hyderabad', 'Chennai', ['Vijayawada', 'Ongole', 'Nellore']),          distance: 628, duration: '10h 00m' },
 ];
 
 // ─────────────────────────────────────────────────────────────
@@ -232,6 +297,11 @@ async function ensureSchedules() {
     });
 
     if (existing) {
+      if (!existing.stops || existing.stops.length === 0 || typeof existing.stops[0] === 'string' || !existing.stops[0].name) {
+        existing.stops = rd.stops;
+        await existing.save();
+        console.log(`  ~ Updated stops for Route: ${rd.source} → ${rd.destination}`);
+      }
       routeMap[i] = existing;
     } else {
       const created = await Route.create({
