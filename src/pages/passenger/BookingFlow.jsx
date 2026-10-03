@@ -774,7 +774,7 @@ const BookingFlow = () => {
   //   • submitting flag prevents double-submit.
   // ==========================================================
 
-  const handlePassengerSubmit = async (details) => {
+  const handlePassengerSubmit = async (details, allMultiDetails = null) => {
     if (submitting) return;
     if (!details) { alert('Please enter passenger details.'); return; }
 
@@ -788,8 +788,9 @@ const BookingFlow = () => {
     // Store whichever passenger details format was submitted
     if (passengerCount === 1) {
       setPassengerDetails(details);
+    } else if (allMultiDetails) {
+      setMultiPassengerDetails(allMultiDetails);
     }
-    // multiPassengerDetails is already set by the multi-form before submit
 
     const scheduleIdToUse = selectedBus?.scheduleId || initialScheduleId;
 
@@ -802,28 +803,32 @@ const BookingFlow = () => {
 
     try {
       const createdBookings = [];
+      const multiList = allMultiDetails || (Array.isArray(details) ? details : multiPassengerDetails);
 
       for (let i = 0; i < seatsToBook.length; i++) {
         const seatNum = seatsToBook[i];
 
         // Resolve per-passenger details
         // Single: use the single `details` object
-        // Multi:  use multiPassengerDetails[i], fall back to `details` if missing
+        // Multi:  use multiList[i], fall back to `details` if missing
         const paxDetails = passengerCount === 1
           ? details
-          : (multiPassengerDetails[i] || details);
+          : ((multiList && multiList[i]) ? multiList[i] : details);
 
         const boardingPointToUse = urlSearchParams.get('boardingPoint') || searchParams?.boardingPoint || undefined;
         const droppingPointToUse = urlSearchParams.get('droppingPoint') || searchParams?.droppingPoint || undefined;
+
+        const rawPhone = String(paxDetails?.phone || '');
+        const cleanPhone = rawPhone.replace(/\D/g, '').slice(-10);
 
         const bookingData = {
           scheduleId: scheduleIdToUse,
           seatNumber: seatNum,
           passengerDetails: {
-            name:   paxDetails?.fullName || paxDetails?.name || '',
+            name:   (paxDetails?.fullName || paxDetails?.name || '').trim(),
             age:    Number(paxDetails?.age),
             gender: paxDetails?.gender || '',
-            phone:  paxDetails?.phone || '',
+            phone:  cleanPhone || rawPhone,
             email:  paxDetails?.email || '',
           },
           smartSeatMonitoring: isMonitoringEnabled(scheduleIdToUse),
@@ -1395,9 +1400,8 @@ const BookingFlow = () => {
               submitting={submitting}
               onSubmit={(allDetails) => {
                 setMultiPassengerDetails(allDetails);
-                // Trigger booking creation with the first passenger's details
-                // (handlePassengerSubmit will use multiPassengerDetails per seat)
-                handlePassengerSubmit(allDetails[0]);
+                // Trigger booking creation passing allDetails directly to avoid async state delay
+                handlePassengerSubmit(allDetails[0], allDetails);
               }}
               onCancel={() => {
                 setSeatSelectionError('');

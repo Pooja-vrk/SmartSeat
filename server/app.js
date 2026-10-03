@@ -45,6 +45,13 @@ const allowedOrigins = [
   'http://localhost:5175',
   'http://localhost:5176',
 
+  // Mobile / Capacitor origins
+  'capacitor://localhost',
+  'http://localhost',
+  'https://localhost',
+  'http://127.0.0.1',
+  'https://127.0.0.1',
+
   // Production Vercel frontend
   'https://smart-seat-liard.vercel.app',
 

@@ -2,7 +2,7 @@
 // Created & Designed by V.Pooja
 
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Bus,
   MapPin,
@@ -21,6 +21,7 @@ import {
   Award,
   TrendingUp,
   ChevronRight,
+  ChevronDown,
   Route,
   Moon,
   Sunset
@@ -120,6 +121,7 @@ const SEAT_STATES = [
 // ─────────────────────────────────────────────
 
 const Home = () => {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useState({
     from: '',
     to: '',
@@ -129,49 +131,114 @@ const Home = () => {
     passengers: 1
   });
   const [routes, setRoutes] = useState([]);
+  const [loadingRoutes, setLoadingRoutes] = useState(true);
+  const [routesError, setRoutesError] = useState(null);
   const [routeStops, setRouteStops] = useState([]);
   const [loadingStops, setLoadingStops] = useState(false);
+  const [stopsError, setStopsError] = useState(null);
+
+  // Normalization helper for route stops across all representations
+  const normalizeStops = (rawStops) => {
+    if (!Array.isArray(rawStops)) return [];
+    return rawStops.map((s, idx) => {
+      if (typeof s === 'string') {
+        return {
+          stopId: `stop-${idx + 1}`,
+          _id: `stop-${idx + 1}`,
+          name: s.trim(),
+          city: s.trim(),
+          type: idx === 0 ? 'pickup' : idx === rawStops.length - 1 ? 'drop' : 'both',
+          isBoarding: idx < rawStops.length - 1,
+          isDropping: idx > 0,
+          sequence: idx + 1
+        };
+      }
+      const type = s.type || (idx === 0 ? 'pickup' : idx === rawStops.length - 1 ? 'drop' : 'both');
+      const isBoarding =
+        s.isBoarding !== undefined
+          ? Boolean(s.isBoarding)
+          : type === 'pickup' || type === 'both' || idx < rawStops.length - 1;
+      const isDropping =
+        s.isDropping !== undefined
+          ? Boolean(s.isDropping)
+          : type === 'drop' || type === 'both' || idx > 0;
+      return {
+        stopId: s.stopId || s._id || `stop-${idx + 1}`,
+        _id: s._id || s.stopId || `stop-${idx + 1}`,
+        name: s.name ? String(s.name).trim() : (s.city ? String(s.city).trim() : ''),
+        city: s.city ? String(s.city).trim() : (s.name ? String(s.name).trim() : ''),
+        type,
+        isBoarding,
+        isDropping,
+        sequence: Number(s.sequence) || (idx + 1),
+        arrivalTime: s.arrivalTime || null,
+        departureTime: s.departureTime || null
+      };
+    });
+  };
 
   // Fetch real routes for dropdown population
-  useEffect(() => {
-    const fetchRoutes = async () => {
-      try {
-        const response = await busService.getRoutes();
-        if (response.success && Array.isArray(response.data)) {
-          setRoutes(response.data);
-        }
-      } catch (err) {
-        console.error('Error fetching routes for search dropdowns:', err);
+  const fetchRoutes = async () => {
+    setLoadingRoutes(true);
+    setRoutesError(null);
+    try {
+      const response = await busService.getRoutes();
+      if (response.success && Array.isArray(response.data)) {
+        setRoutes(response.data);
+      } else {
+        setRoutes([]);
       }
-    };
+    } catch (err) {
+      console.error('Error fetching routes for search dropdowns:', err);
+      setRoutesError(err.message || 'Failed to load available routes');
+      setRoutes([]);
+    } finally {
+      setLoadingRoutes(false);
+    }
+  };
+
+  useEffect(() => {
     fetchRoutes();
   }, []);
 
-  // Fetch route stops whenever both From and To are selected
+  // Fetch route stops whenever both From and To are selected (with stale response cancellation)
   useEffect(() => {
+    let isMounted = true;
     const fetchStops = async () => {
       if (!searchParams.from || !searchParams.to) {
-        setRouteStops([]);
+        if (isMounted) {
+          setRouteStops([]);
+          setStopsError(null);
+        }
         return;
       }
 
       setLoadingStops(true);
+      setStopsError(null);
       try {
         const response = await busService.getRouteStops(searchParams.from, searchParams.to);
+        if (!isMounted) return;
         if (response.success && Array.isArray(response.stops)) {
-          setRouteStops(response.stops);
+          setRouteStops(normalizeStops(response.stops));
         } else {
           setRouteStops([]);
         }
       } catch (err) {
+        if (!isMounted) return;
         console.error('Error loading route stops:', err);
+        setStopsError(err.message || 'Failed to load route stops');
         setRouteStops([]);
       } finally {
-        setLoadingStops(false);
+        if (isMounted) {
+          setLoadingStops(false);
+        }
       }
     };
 
     fetchStops();
+    return () => {
+      isMounted = false;
+    };
   }, [searchParams.from, searchParams.to]);
 
   // Derive real city lists from API data
@@ -219,7 +286,7 @@ const Home = () => {
   // Dropping point options: stops with sequence strictly greater than selected boarding point
   const selectedBoardingStop = routeStops.find(
     (s) =>
-      s.name.trim().toLowerCase() === (searchParams.boardingPoint || '').trim().toLowerCase() ||
+      (s.name && s.name.trim().toLowerCase() === (searchParams.boardingPoint || '').trim().toLowerCase()) ||
       (s.stopId && String(s.stopId) === String(searchParams.boardingPoint)) ||
       (s._id && String(s._id) === String(searchParams.boardingPoint))
   );
@@ -249,6 +316,7 @@ const Home = () => {
       passengers: searchParams.passengers || 1
     });
     setRouteStops([]);
+    setStopsError(null);
   };
 
   // Cascade Reset 2: When To changes -> reset Date, Boarding, Dropping
@@ -261,6 +329,7 @@ const Home = () => {
       boardingPoint: '',
       droppingPoint: ''
     }));
+    setStopsError(null);
   };
 
   // Cascade 3: When Date changes -> update date
@@ -295,7 +364,7 @@ const Home = () => {
     if (searchParams.droppingPoint) {
       url += `&droppingPoint=${encodeURIComponent(searchParams.droppingPoint)}`;
     }
-    window.location.href = url;
+    navigate(url);
   };
 
   return (
@@ -468,14 +537,23 @@ const Home = () => {
                     className="ss-search-form__select"
                     value={searchParams.from}
                     onChange={handleFromChange}
+                    disabled={loadingRoutes}
                     required
                     aria-label="Departure city"
+                    aria-disabled={loadingRoutes}
                   >
-                    <option value="">Select departure city</option>
+                    <option value="">
+                      {loadingRoutes
+                        ? 'Loading departure cities...'
+                        : routesError
+                        ? 'Failed to load cities — select to retry'
+                        : 'Select departure city'}
+                    </option>
                     {fromCities.map(city => (
                       <option key={city} value={city}>{city}</option>
                     ))}
                   </select>
+                  <ChevronDown className="ss-search-form__chevron" aria-hidden="true" />
                 </div>
               </div>
 
@@ -491,18 +569,23 @@ const Home = () => {
                     className="ss-search-form__select"
                     value={searchParams.to}
                     onChange={handleToChange}
-                    disabled={!searchParams.from}
+                    disabled={!searchParams.from || loadingRoutes}
                     required
                     aria-label="Destination city"
-                    aria-disabled={!searchParams.from}
+                    aria-disabled={!searchParams.from || loadingRoutes}
                   >
                     <option value="">
-                      {!searchParams.from ? 'Select departure city first' : 'Select destination city'}
+                      {!searchParams.from
+                        ? 'Select departure city first'
+                        : toCities.length === 0
+                        ? 'No destinations for this origin'
+                        : 'Select destination city'}
                     </option>
                     {toCities.map(city => (
                       <option key={city} value={city}>{city}</option>
                     ))}
                   </select>
+                  <ChevronDown className="ss-search-form__chevron" aria-hidden="true" />
                 </div>
               </div>
 
@@ -518,7 +601,7 @@ const Home = () => {
                     type="date"
                     min={new Date().toISOString().split('T')[0]}
                     max={new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
-                    className="ss-search-form__select"
+                    className="ss-search-form__select ss-search-form__date-input"
                     value={searchParams.date}
                     onChange={handleDateChange}
                     disabled={!searchParams.from || !searchParams.to}
@@ -544,13 +627,15 @@ const Home = () => {
                     disabled={!searchParams.from || !searchParams.to || loadingStops || boardingOptions.length === 0}
                     required
                     aria-label="Boarding point"
-                    aria-disabled={!searchParams.from || !searchParams.to || loadingStops}
+                    aria-disabled={!searchParams.from || !searchParams.to || loadingStops || boardingOptions.length === 0}
                   >
                     <option value="">
                       {!searchParams.from || !searchParams.to
                         ? 'Select departure & destination first'
                         : loadingStops
                         ? 'Loading boarding points...'
+                        : stopsError
+                        ? 'Error loading stops — reselect route'
                         : boardingOptions.length === 0
                         ? 'No boarding points available for this route'
                         : 'Select boarding point'}
@@ -561,6 +646,7 @@ const Home = () => {
                       </option>
                     ))}
                   </select>
+                  <ChevronDown className="ss-search-form__chevron" aria-hidden="true" />
                 </div>
               </div>
 
@@ -579,7 +665,7 @@ const Home = () => {
                     disabled={!searchParams.boardingPoint || droppingOptions.length === 0}
                     required
                     aria-label="Dropping point"
-                    aria-disabled={!searchParams.boardingPoint}
+                    aria-disabled={!searchParams.boardingPoint || droppingOptions.length === 0}
                   >
                     <option value="">
                       {!searchParams.boardingPoint
@@ -594,6 +680,7 @@ const Home = () => {
                       </option>
                     ))}
                   </select>
+                  <ChevronDown className="ss-search-form__chevron" aria-hidden="true" />
                 </div>
               </div>
 
@@ -613,7 +700,8 @@ const Home = () => {
                       borderRadius: '0.875rem',
                       overflow: 'hidden',
                       height: '48px',
-                      opacity: !searchParams.droppingPoint ? 0.6 : 1
+                      minHeight: '48px',
+                      boxSizing: 'border-box'
                     }}
                   >
                     <button
@@ -633,11 +721,12 @@ const Home = () => {
                         color: '#0891b2',
                         background: 'transparent',
                         border: 'none',
-                        cursor: !searchParams.droppingPoint || searchParams.passengers <= 1 ? 'not-allowed' : 'pointer',
-                        opacity: !searchParams.droppingPoint || searchParams.passengers <= 1 ? 0.35 : 1,
+                        cursor: searchParams.passengers <= 1 ? 'not-allowed' : 'pointer',
+                        opacity: searchParams.passengers <= 1 ? 0.35 : 1,
                         flexShrink: 0,
+                        touchAction: 'manipulation'
                       }}
-                      disabled={!searchParams.droppingPoint || searchParams.passengers <= 1}
+                      disabled={searchParams.passengers <= 1}
                     >
                       −
                     </button>
@@ -671,11 +760,12 @@ const Home = () => {
                         color: '#0891b2',
                         background: 'transparent',
                         border: 'none',
-                        cursor: !searchParams.droppingPoint || searchParams.passengers >= 6 ? 'not-allowed' : 'pointer',
-                        opacity: !searchParams.droppingPoint || searchParams.passengers >= 6 ? 0.35 : 1,
+                        cursor: searchParams.passengers >= 6 ? 'not-allowed' : 'pointer',
+                        opacity: searchParams.passengers >= 6 ? 0.35 : 1,
                         flexShrink: 0,
+                        touchAction: 'manipulation'
                       }}
-                      disabled={!searchParams.droppingPoint || searchParams.passengers >= 6}
+                      disabled={searchParams.passengers >= 6}
                     >
                       +
                     </button>

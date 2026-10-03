@@ -438,50 +438,80 @@ const Ticket = ({ booking, onDownload, onShare }) => {
               <User className="w-5 h-5 text-gray-500" />
 
               <h3 className="font-semibold text-gray-900">
-                Passenger Information
+                {Array.isArray(safeBooking?.bookings) && safeBooking.bookings.length > 1
+                  ? 'Passenger Details'
+                  : 'Passenger Information'}
               </h3>
 
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+            {Array.isArray(safeBooking?.bookings) && safeBooking.bookings.length > 1 ? (
+              <div className="divide-y divide-gray-200">
+                {safeBooking.bookings.map((b, idx) => {
+                  const p = b.passengerDetails || b.passenger || {};
+                  return (
+                    <div key={b._id || idx} className="py-2.5 first:pt-0 last:pb-0 grid grid-cols-1 sm:grid-cols-4 gap-2 text-sm items-center">
+                      <div>
+                        <span className="text-xs text-gray-500 block">Seat</span>
+                        <span className="font-bold text-cyan-800">{b.seatNumber || safeBooking.seatNumbers?.[idx] || `Seat ${idx + 1}`}</span>
+                      </div>
+                      <div>
+                        <span className="text-xs text-gray-500 block">Name</span>
+                        <span className="font-medium text-gray-900">{p.name || p.fullName || 'N/A'}</span>
+                      </div>
+                      <div>
+                        <span className="text-xs text-gray-500 block">Age / Gender</span>
+                        <span className="text-gray-700">{p.age ? `${p.age} yrs` : '—'} {p.gender ? `(${p.gender})` : ''}</span>
+                      </div>
+                      <div>
+                        <span className="text-xs text-gray-500 block">Contact</span>
+                        <span className="text-gray-700">{p.phone || passengerPhone}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
 
-              <div>
+                <div>
 
-                <p className="text-gray-600">
-                  Name
-                </p>
+                  <p className="text-gray-600">
+                    Name
+                  </p>
 
-                <p className="font-medium text-gray-900">
-                  {passengerName}
-                </p>
+                  <p className="font-medium text-gray-900">
+                    {passengerName}
+                  </p>
+
+                </div>
+
+                <div>
+
+                  <p className="text-gray-600">
+                    Email
+                  </p>
+
+                  <p className="font-medium text-gray-900 break-all">
+                    {passengerEmail}
+                  </p>
+
+                </div>
+
+                <div>
+
+                  <p className="text-gray-600">
+                    Phone
+                  </p>
+
+                  <p className="font-medium text-gray-900">
+                    {passengerPhone}
+                  </p>
+
+                </div>
 
               </div>
-
-              <div>
-
-                <p className="text-gray-600">
-                  Email
-                </p>
-
-                <p className="font-medium text-gray-900 break-all">
-                  {passengerEmail}
-                </p>
-
-              </div>
-
-              <div>
-
-                <p className="text-gray-600">
-                  Phone
-                </p>
-
-                <p className="font-medium text-gray-900">
-                  {passengerPhone}
-                </p>
-
-              </div>
-
-            </div>
+            )}
 
           </div>
 

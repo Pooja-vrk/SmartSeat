@@ -59,6 +59,34 @@ const routeSchema = new mongoose.Schema({
   timestamps: true
 });
 
+// Pre-validate hook to automatically normalize string stops into stopSchema objects
+routeSchema.pre('validate', function (next) {
+  if (Array.isArray(this.stops)) {
+    this.stops = this.stops.map((s, idx) => {
+      if (typeof s === 'string') {
+        const trimmed = s.trim();
+        return {
+          name: trimmed,
+          city: trimmed,
+          type: 'both',
+          sequence: idx + 1
+        };
+      }
+      if (s && typeof s === 'object') {
+        return {
+          ...s,
+          name: s.name ? String(s.name).trim() : '',
+          city: s.city ? String(s.city).trim() : (s.name ? String(s.name).trim() : ''),
+          type: s.type || 'both',
+          sequence: Number(s.sequence) || (idx + 1)
+        };
+      }
+      return s;
+    });
+  }
+  next();
+});
+
 // Compound index for source-destination queries
 routeSchema.index({ source: 1, destination: 1 });
 

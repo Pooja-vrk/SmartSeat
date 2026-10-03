@@ -64,7 +64,7 @@ const BUS_TEMPLATES = [
     busType: 'AC Sleeper',
     registrationNumber: 'MH-02-AC-0002',
     cfg: SEAT_CFG.sleeper,
-    amenities: ['WiFi', 'USB Charging', 'Blanket', 'Pillow', 'Water Bottle', 'AC'],
+    amenities: ['WiFi', 'USB Charging', 'Blanket', 'Pillow', 'Water Bottle', 'Reading Light'],
     rating: 4.4
   },
   {
@@ -85,7 +85,7 @@ const BUS_TEMPLATES = [
     busType: 'AC Semi Sleeper',
     registrationNumber: 'KL-04-AC-0004',
     cfg: SEAT_CFG.semiSleeper,
-    amenities: ['WiFi', 'USB Charging', 'Water Bottle', 'AC'],
+    amenities: ['WiFi', 'USB Charging', 'Water Bottle', 'Reading Light'],
     rating: 4.3
   },
   {
@@ -95,7 +95,7 @@ const BUS_TEMPLATES = [
     busType: 'AC Semi Sleeper',
     registrationNumber: 'AP-05-AC-0005',
     cfg: SEAT_CFG.semiSleeper,
-    amenities: ['WiFi', 'Water Bottle', 'USB Charging', 'AC', 'Snacks'],
+    amenities: ['WiFi', 'Water Bottle', 'USB Charging', 'Pillow', 'Blanket'],
     rating: 4.5
   },
   {
@@ -116,7 +116,7 @@ const BUS_TEMPLATES = [
     busType: 'AC Seater',
     registrationNumber: 'RJ-07-AC-0007',
     cfg: SEAT_CFG.seater,
-    amenities: ['WiFi', 'USB Charging', 'Water Bottle', 'AC'],
+    amenities: ['WiFi', 'USB Charging', 'Water Bottle', 'Reading Light'],
     rating: 4.1
   },
   {
@@ -126,7 +126,7 @@ const BUS_TEMPLATES = [
     busType: 'AC Seater',
     registrationNumber: 'DL-08-AC-0008',
     cfg: SEAT_CFG.seater,
-    amenities: ['WiFi', 'AC', 'Water Bottle', 'USB Charging'],
+    amenities: ['WiFi', 'Emergency Exit', 'Water Bottle', 'USB Charging'],
     rating: 4.2
   },
   {
@@ -146,7 +146,7 @@ const BUS_TEMPLATES = [
     busType: 'AC Seater',
     registrationNumber: 'TN-10-AC-0010',
     cfg: SEAT_CFG.seater,
-    amenities: ['WiFi', 'AC', 'USB Charging', 'Water Bottle'],
+    amenities: ['WiFi', 'Emergency Exit', 'USB Charging', 'Water Bottle'],
     rating: 4.0
   },
   // Multi-Axle
@@ -157,7 +157,7 @@ const BUS_TEMPLATES = [
     busType: 'AC Multi-Axle',
     registrationNumber: 'KA-11-AC-0011',
     cfg: SEAT_CFG.seater,
-    amenities: ['WiFi', 'AC', 'USB Charging', 'Water Bottle', 'Snacks', 'TV'],
+    amenities: ['WiFi', 'Emergency Exit', 'USB Charging', 'Water Bottle', 'Reading Light', 'TV'],
     rating: 4.7
   }
 ];
@@ -347,10 +347,28 @@ async function seed() {
 
     const routes = [];
     for (const rd of ROUTE_DEFS) {
+      const stops = (rd.stops || []).map((s, idx) => {
+        if (typeof s === 'string') {
+          return {
+            name: s.trim(),
+            city: s.trim(),
+            type: 'both',
+            sequence: idx + 1
+          };
+        }
+        return {
+          ...s,
+          name: s.name ? String(s.name).trim() : '',
+          city: s.city ? String(s.city).trim() : (s.name ? String(s.name).trim() : ''),
+          type: s.type || 'both',
+          sequence: Number(s.sequence) || (idx + 1)
+        };
+      });
+
       const route = await Route.create({
         source: rd.source,
         destination: rd.destination,
-        stops: rd.stops,
+        stops,
         distance: rd.distance,
         estimatedDuration: rd.duration,
         isActive: true
