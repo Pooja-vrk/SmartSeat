@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 
 import { useAuth } from '../../context/AuthContext';
+import BrandIcon from '../../components/layout/BrandIcon';
 import './Register.css';
 
 const Register = () => {
@@ -171,19 +172,13 @@ const Register = () => {
       <header className="rp-header">
 
         <Link to="/" className="rp-brand">
-
-          <div className="rp-brand-icon">
-            <Bus size={21} />
-          </div>
-
+          <BrandIcon className="w-8 h-8" />
           <div className="rp-brand-text">
             <span className="rp-brand-name">
               SMART<span>SEAT</span>
             </span>
-
-            <small>SMART MOBILITY</small>
+            <small>BOOK · TRACK · TRAVEL</small>
           </div>
-
         </Link>
 
         <nav className="rp-nav">
@@ -228,11 +223,8 @@ const Register = () => {
 
           <div className="rp-card-heading">
 
-            <div className="rp-card-logo">
-              <div className="rp-card-logo-icon">
-                <Bus size={21} />
-              </div>
-
+            <div className="rp-card-logo flex items-center justify-center gap-2 mb-3">
+              <BrandIcon className="w-8 h-8" />
               <span>
                 SMART<span>SEAT</span>
               </span>

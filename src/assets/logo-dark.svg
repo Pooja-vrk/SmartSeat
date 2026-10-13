@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 80" width="420" height="80">
+  <defs>
+    <!-- Cyan to Electric Blue Gradient -->
+    <linearGradient id="cyanBlueGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22D3EE"/>
+      <stop offset="60%" stop-color="#06B6D4"/>
+      <stop offset="100%" stop-color="#3B82F6"/>
+    </linearGradient>
+
+    <!-- Road Ribbon Gradient -->
+    <linearGradient id="roadRibbon" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#3B82F6" stop-opacity="0.3"/>
+      <stop offset="60%" stop-color="#06B6D4"/>
+      <stop offset="100%" stop-color="#22D3EE"/>
+    </linearGradient>
+
+    <!-- Glass Windshield -->
+    <linearGradient id="glassTint" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="100%" stop-color="#0284C7"/>
+    </linearGradient>
+
+    <!-- Orbital Accent -->
+    <linearGradient id="orbitalRing" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F472B6"/>
+      <stop offset="100%" stop-color="#8B5CF6"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ══════════════════════════════════════════════════
+       EMBLEM ICON (x: 8 to 72, y: 8 to 72)
+  ══════════════════════════════════════════════════ -->
+  <g transform="translate(6, 6)">
+    <!-- Icon Backdrop Container -->
+    <rect x="0" y="0" width="68" height="68" rx="18" fill="#071C49" stroke="#1E293B" stroke-width="1.2"/>
+
+    <!-- Orbital Light Ring -->
+    <ellipse cx="34" cy="32" rx="25" ry="15" fill="none" stroke="url(#orbitalRing)" stroke-width="1.5" opacity="0.7" stroke-dasharray="26 12" transform="rotate(-18 34 32)"/>
+
+    <!-- Futuristic Location Pin -->
+    <path d="M 34 8 C 23.5 8, 16 16, 16 26.5 C 16 35, 26 46, 34 52 C 42 46, 52 35, 52 26.5 C 52 16, 44.5 8, 34 8 Z"
+          fill="none" stroke="url(#cyanBlueGrad)" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="34" cy="23" r="3.2" fill="#22D3EE"/>
+
+    <!-- Sweeping Neon Road -->
+    <path d="M 10 56 C 21 56, 26 48, 40 45 C 48 43, 54 46, 58 50"
+          fill="none" stroke="url(#roadRibbon)" stroke-width="3.5" stroke-linecap="round"/>
+    <path d="M 16 58 C 24 58, 28 52, 40 49 C 46 47, 51 50, 54 53"
+          fill="none" stroke="#22D3EE" stroke-width="1.2" stroke-linecap="round" opacity="0.85"/>
+
+    <!-- Electric Coach Bus -->
+    <g transform="translate(19, 25)">
+      <!-- Main Coach Body -->
+      <path d="M 6 2 C 12 1, 21 1.5, 24 4 C 27 5.5, 28 10.5, 28 18.5 C 28 20, 27 21, 25 21 L 4 21 C 2 21, 1 20, 1 18 C 1 10.5, 2 3.5, 6 2 Z"
+            fill="#F1F5F9"/>
+      <!-- Roofline -->
+      <path d="M 6 2 C 12 1, 21 1.5, 24 4" fill="none" stroke="#3B82F6" stroke-width="1.2" stroke-linecap="round"/>
+      <!-- Windshield -->
+      <path d="M 5 4.5 C 9.5 3.5, 19.5 3.8, 23.5 6 C 24.8 7, 25 9.8, 25 11.5 C 19.5 11.8, 8.5 11.5, 4 11 C 3.8 8.2, 4 5.5, 5 4.5 Z"
+            fill="url(#glassTint)"/>
+      <!-- Headlights -->
+      <path d="M 3 14.5 L 8.5 14.8" stroke="#22D3EE" stroke-width="1.6" stroke-linecap="round"/>
+      <path d="M 19.5 15 L 25 14.5" stroke="#22D3EE" stroke-width="1.6" stroke-linecap="round"/>
+      <line x1="10.5" y1="15" x2="17.5" y2="15" stroke="#38BDF8" stroke-width="1"/>
+      <!-- Bumper / Wheels -->
+      <rect x="7" y="17.8" width="14" height="2.2" rx="1.1" fill="#071C49"/>
+      <rect x="3.5" y="20.5" width="4.5" height="2.5" rx="1.2" fill="#050B1D"/>
+      <rect x="20" y="20.5" width="4.5" height="2.5" rx="1.2" fill="#050B1D"/>
+    </g>
+  </g>
+
+  <!-- ══════════════════════════════════════════════════
+       WORDMARK & TAGLINE (DARK BACKGROUND VARIANT)
+  ══════════════════════════════════════════════════ -->
+  <g transform="translate(92, 46)">
+    <!-- Main Brand Name: SMART in White, SEAT in Cyan -->
+    <text font-family="'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+          font-weight="900" font-size="28" letter-spacing="1.5">
+      <tspan fill="#F1F5F9">SMART</tspan><tspan fill="#06B6D4">SEAT</tspan>
+    </text>
+
+    <!-- Tagline: BOOK · TRACK · TRAVEL -->
+    <text y="20" font-family="'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+          font-weight="700" font-size="9" fill="#94A3B8" letter-spacing="3.5">
+      BOOK · TRACK · TRAVEL
+    </text>
+  </g>
+</svg>

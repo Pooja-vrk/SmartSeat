@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
+import BrandIcon from './BrandIcon';
 import './NavbarFooter.css';
 
 const Header = () => {
@@ -63,17 +64,14 @@ const Header = () => {
             BRAND LOGO + TAGLINE
         ══════════════════════════════════════════ */}
         <Link to="/" className="ss-navbar__brand" aria-label="SmartSeat — Home">
-          {/* icon */}
-          <div className="ss-navbar__brand-icon">
-            <Bus className="w-5 h-5" />
-            <Sparkles className="w-3 h-3 ss-navbar__brand-spark" aria-hidden="true" />
-          </div>
+          {/* Brand Emblem */}
+          <BrandIcon className="w-9 h-9" />
           {/* wordmark */}
           <div className="ss-navbar__brand-text">
             <span className="ss-navbar__brand-name">
               SMART<span className="ss-navbar__brand-accent">SEAT</span>
             </span>
-            <span className="ss-navbar__brand-tagline">Smart Mobility</span>
+            <span className="ss-navbar__brand-tagline">BOOK · TRACK · TRAVEL</span>
           </div>
         </Link>
 

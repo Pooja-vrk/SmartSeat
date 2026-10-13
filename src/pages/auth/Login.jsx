@@ -13,6 +13,7 @@ import {
   Mail,
   Lock,
 } from 'lucide-react';
+import BrandIcon from '../../components/layout/BrandIcon';
 import './Login.css';
 
 const Login = () => {
@@ -63,10 +64,8 @@ const Login = () => {
         <div className="lp-card">
 
           {/* logo */}
-          <div className="lp-card__logo">
-            <div className="lp-card__logo-icon">
-              <Bus className="w-5 h-5 text-white" aria-hidden="true" />
-            </div>
+          <div className="lp-card__logo flex items-center gap-3">
+            <BrandIcon className="w-8 h-8" />
             <span className="lp-card__logo-name">
               SMART<span className="lp-card__logo-accent">SEAT</span>
             </span>

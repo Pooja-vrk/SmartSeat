@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardHeader, CardBody, Button, Input } from '../../components/common';
 import { authService } from '../../services/authService';
-import { Bus, Lock, CheckCircle, AlertCircle } from 'lucide-react';
+import { Lock, CheckCircle, AlertCircle } from 'lucide-react';
+import BrandIcon from '../../components/layout/BrandIcon';
 
 const ResetPassword = () => {
   const [searchParams] = useSearchParams();
@@ -126,12 +127,13 @@ const ResetPassword = () => {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center space-x-2 mb-4">
-            <Bus className="w-10 h-10 text-primary-600" />
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent">
-              SmartSeat
+          <div className="flex items-center justify-center space-x-3 mb-2">
+            <BrandIcon className="w-10 h-10" />
+            <h1 className="text-3xl font-black tracking-tight text-slate-900">
+              SMART<span className="text-cyan-500">SEAT</span>
             </h1>
           </div>
+          <p className="text-[10px] font-bold tracking-widest text-slate-500 mb-2">BOOK · TRACK · TRAVEL</p>
           <p className="text-gray-600">Set your new password</p>
         </div>
 

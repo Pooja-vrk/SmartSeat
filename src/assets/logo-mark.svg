@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 68 68" width="68" height="68">
+  <defs>
+    <linearGradient id="markCyanBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22D3EE"/>
+      <stop offset="60%" stop-color="#06B6D4"/>
+      <stop offset="100%" stop-color="#3B82F6"/>
+    </linearGradient>
+    <linearGradient id="markRoad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#3B82F6" stop-opacity="0.3"/>
+      <stop offset="60%" stop-color="#06B6D4"/>
+      <stop offset="100%" stop-color="#22D3EE"/>
+    </linearGradient>
+    <linearGradient id="markGlass" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="100%" stop-color="#0284C7"/>
+    </linearGradient>
+    <linearGradient id="markOrbital" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F472B6"/>
+      <stop offset="100%" stop-color="#8B5CF6"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Icon Container -->
+  <rect x="0" y="0" width="68" height="68" rx="18" fill="#071C49" stroke="#1E293B" stroke-width="1.2"/>
+
+  <!-- Orbital Light Ring -->
+  <ellipse cx="34" cy="32" rx="25" ry="15" fill="none" stroke="url(#markOrbital)" stroke-width="1.5" opacity="0.75" stroke-dasharray="26 12" transform="rotate(-18 34 32)"/>
+
+  <!-- Futuristic Location Pin -->
+  <path d="M 34 8 C 23.5 8, 16 16, 16 26.5 C 16 35, 26 46, 34 52 C 42 46, 52 35, 52 26.5 C 52 16, 44.5 8, 34 8 Z"
+        fill="none" stroke="url(#markCyanBlue)" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="34" cy="23" r="3.2" fill="#22D3EE"/>
+
+  <!-- Sweeping Neon Road -->
+  <path d="M 10 56 C 21 56, 26 48, 40 45 C 48 43, 54 46, 58 50"
+        fill="none" stroke="url(#markRoad)" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M 16 58 C 24 58, 28 52, 40 49 C 46 47, 51 50, 54 53"
+        fill="none" stroke="#22D3EE" stroke-width="1.2" stroke-linecap="round" opacity="0.85"/>
+
+  <!-- Electric Coach Bus -->
+  <g transform="translate(19, 25)">
+    <path d="M 6 2 C 12 1, 21 1.5, 24 4 C 27 5.5, 28 10.5, 28 18.5 C 28 20, 27 21, 25 21 L 4 21 C 2 21, 1 20, 1 18 C 1 10.5, 2 3.5, 6 2 Z"
+          fill="#F1F5F9"/>
+    <path d="M 6 2 C 12 1, 21 1.5, 24 4" fill="none" stroke="#3B82F6" stroke-width="1.2" stroke-linecap="round"/>
+    <path d="M 5 4.5 C 9.5 3.5, 19.5 3.8, 23.5 6 C 24.8 7, 25 9.8, 25 11.5 C 19.5 11.8, 8.5 11.5, 4 11 C 3.8 8.2, 4 5.5, 5 4.5 Z"
+          fill="url(#markGlass)"/>
+    <path d="M 3 14.5 L 8.5 14.8" stroke="#22D3EE" stroke-width="1.6" stroke-linecap="round"/>
+    <path d="M 19.5 15 L 25 14.5" stroke="#22D3EE" stroke-width="1.6" stroke-linecap="round"/>
+    <line x1="10.5" y1="15" x2="17.5" y2="15" stroke="#38BDF8" stroke-width="1"/>
+    <rect x="7" y="17.8" width="14" height="2.2" rx="1.1" fill="#071C49"/>
+    <rect x="3.5" y="20.5" width="4.5" height="2.5" rx="1.2" fill="#050B1D"/>
+    <rect x="20" y="20.5" width="4.5" height="2.5" rx="1.2" fill="#050B1D"/>
+  </g>
+</svg>

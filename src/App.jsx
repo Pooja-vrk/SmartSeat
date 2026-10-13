@@ -14,6 +14,7 @@ import { NotificationProvider } from './context/NotificationContext';
 import { SmartSeatProvider } from './context/SmartSeatContext';
 
 import Layout from './components/layout/Layout';
+import BrandIcon from './components/layout/BrandIcon';
 import { allRoutes } from './routes';
 
 
@@ -62,26 +63,25 @@ const AppRoutes = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
+      <div className="min-h-screen flex items-center justify-center bg-[#050B1D] text-slate-100">
+        <div className="text-center flex flex-col items-center">
+          <div className="relative mb-5">
+            <BrandIcon className="w-16 h-16 animate-pulse" />
+            <div className="absolute -inset-2 bg-cyan-500/20 rounded-full blur-xl -z-10 animate-ping opacity-30" />
+          </div>
 
-          <div
-            className="
-              w-12 h-12
-              border-4
-              border-primary-600
-              border-t-transparent
-              rounded-full
-              animate-spin
-              mx-auto
-              mb-4
-            "
-          />
+          <h2 className="text-2xl font-black tracking-tight text-white mb-1">
+            SMART<span className="text-cyan-400">SEAT</span>
+          </h2>
 
-          <p className="text-gray-600">
-            Loading SmartSeat...
+          <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase mb-4">
+            BOOK · TRACK · TRAVEL
           </p>
 
+          {/* Minimal futuristic glowing progress bar */}
+          <div className="w-32 h-1 bg-slate-800 rounded-full overflow-hidden">
+            <div className="w-full h-full bg-gradient-to-r from-blue-500 via-cyan-400 to-teal-300 rounded-full animate-pulse" />
+          </div>
         </div>
       </div>
     );

@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 
 import { busService } from '../../services/busService';
+import BrandIcon from '../../components/layout/BrandIcon';
 import './Home.css';
 
 // ─────────────────────────────────────────────
@@ -1128,7 +1129,7 @@ const Home = () => {
 
             <div className="ss-creator-card__identity">
               <div className="ss-creator-card__brand">
-                <Bus className="w-5 h-5 text-cyan-400" aria-hidden="true" />
+                <BrandIcon className="w-6 h-6" />
                 <span className="ss-creator-card__brand-name">SMARTSEAT</span>
               </div>
               <div className="ss-creator-card__byline">

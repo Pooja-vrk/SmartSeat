@@ -1,5 +1,5 @@
 {
-  "name": "SmartSeat - Smart Bus Booking",
+  "name": "SmartSeat — Smart Bus Booking Platform",
   "short_name": "SmartSeat",
   "description": "Smart bus ticket booking, real-time seat tracking, and passenger companion preferences.",
   "start_url": "/",
@@ -7,8 +7,8 @@
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#ffffff",
-  "theme_color": "#0284c7",
+  "background_color": "#050B1D",
+  "theme_color": "#050B1D",
   "categories": ["travel", "utilities"],
   "icons": [
     {

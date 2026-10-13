@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 80" width="420" height="80">
+  <defs>
+    <!-- Cyan to Electric Blue Gradient -->
+    <linearGradient id="cyanBlueGradLight" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0891B2"/>
+      <stop offset="60%" stop-color="#0284C7"/>
+      <stop offset="100%" stop-color="#2563EB"/>
+    </linearGradient>
+
+    <!-- Road Ribbon Gradient -->
+    <linearGradient id="roadRibbonLight" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#2563EB" stop-opacity="0.2"/>
+      <stop offset="60%" stop-color="#0284C7"/>
+      <stop offset="100%" stop-color="#0891B2"/>
+    </linearGradient>
+
+    <!-- Glass Windshield -->
+    <linearGradient id="glassTintLight" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="100%" stop-color="#0284C7"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ══════════════════════════════════════════════════
+       EMBLEM ICON (LIGHT BACKGROUND)
+  ══════════════════════════════════════════════════ -->
+  <g transform="translate(6, 6)">
+    <!-- Icon Backdrop Container (Clean Slate Navy / Cyan glow) -->
+    <rect x="0" y="0" width="68" height="68" rx="18" fill="#F0F9FF" stroke="#BAE6FD" stroke-width="1.5"/>
+
+    <!-- Orbital Light Ring -->
+    <ellipse cx="34" cy="32" rx="25" ry="15" fill="none" stroke="#A855F7" stroke-width="1.4" opacity="0.4" stroke-dasharray="26 12" transform="rotate(-18 34 32)"/>
+
+    <!-- Futuristic Location Pin -->
+    <path d="M 34 8 C 23.5 8, 16 16, 16 26.5 C 16 35, 26 46, 34 52 C 42 46, 52 35, 52 26.5 C 52 16, 44.5 8, 34 8 Z"
+          fill="none" stroke="url(#cyanBlueGradLight)" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="34" cy="23" r="3.2" fill="#0284C7"/>
+
+    <!-- Sweeping Road -->
+    <path d="M 10 56 C 21 56, 26 48, 40 45 C 48 43, 54 46, 58 50"
+          fill="none" stroke="url(#roadRibbonLight)" stroke-width="3.5" stroke-linecap="round"/>
+    <path d="M 16 58 C 24 58, 28 52, 40 49 C 46 47, 51 50, 54 53"
+          fill="none" stroke="#0891B2" stroke-width="1.2" stroke-linecap="round" opacity="0.9"/>
+
+    <!-- Electric Coach Bus -->
+    <g transform="translate(19, 25)">
+      <!-- Main Coach Body -->
+      <path d="M 6 2 C 12 1, 21 1.5, 24 4 C 27 5.5, 28 10.5, 28 18.5 C 28 20, 27 21, 25 21 L 4 21 C 2 21, 1 20, 1 18 C 1 10.5, 2 3.5, 6 2 Z"
+            fill="#FFFFFF" stroke="#0284C7" stroke-width="0.8"/>
+      <!-- Windshield -->
+      <path d="M 5 4.5 C 9.5 3.5, 19.5 3.8, 23.5 6 C 24.8 7, 25 9.8, 25 11.5 C 19.5 11.8, 8.5 11.5, 4 11 C 3.8 8.2, 4 5.5, 5 4.5 Z"
+            fill="url(#glassTintLight)"/>
+      <!-- Headlights -->
+      <path d="M 3 14.5 L 8.5 14.8" stroke="#06B6D4" stroke-width="1.6" stroke-linecap="round"/>
+      <path d="M 19.5 15 L 25 14.5" stroke="#06B6D4" stroke-width="1.6" stroke-linecap="round"/>
+      <line x1="10.5" y1="15" x2="17.5" y2="15" stroke="#0284C7" stroke-width="1"/>
+      <!-- Bumper / Wheels -->
+      <rect x="7" y="17.8" width="14" height="2.2" rx="1.1" fill="#0C4A6E"/>
+      <rect x="3.5" y="20.5" width="4.5" height="2.5" rx="1.2" fill="#0F172A"/>
+      <rect x="20" y="20.5" width="4.5" height="2.5" rx="1.2" fill="#0F172A"/>
+    </g>
+  </g>
+
+  <!-- ══════════════════════════════════════════════════
+       WORDMARK & TAGLINE (LIGHT BACKGROUND VARIANT)
+  ══════════════════════════════════════════════════ -->
+  <g transform="translate(92, 46)">
+    <!-- Main Brand Name: SMART in Midnight Navy, SEAT in Cyan/Blue -->
+    <text font-family="'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+          font-weight="900" font-size="28" letter-spacing="1.5">
+      <tspan fill="#050B1D">SMART</tspan><tspan fill="#0284C7">SEAT</tspan>
+    </text>
+
+    <!-- Tagline: BOOK · TRACK · TRAVEL -->
+    <text y="20" font-family="'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+          font-weight="700" font-size="9" fill="#64748B" letter-spacing="3.5">
+      BOOK · TRACK · TRAVEL
+    </text>
+  </g>
+</svg>

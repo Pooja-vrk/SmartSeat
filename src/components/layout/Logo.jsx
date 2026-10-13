@@ -1,18 +1,19 @@
 // Logo component — SmartSeat Mobility Branding
+// Upgraded with premium futuristic electric coach emblem & geometric typography
 
-import { Bus, Sparkles } from 'lucide-react';
+import BrandIcon from './BrandIcon';
 import './NavbarFooter.css';
 
 /**
  * size: 'sm' | 'md' | 'lg' | 'xl'
  * variant: 'dark' (default, white text on dark bg) | 'light' (dark text on light bg)
  */
-const Logo = ({ size = 'md', variant = 'dark', className = '' }) => {
+const Logo = ({ size = 'md', variant = 'dark', className = '', showTagline = true }) => {
   const iconSizes = {
-    sm: 'w-4 h-4',
-    md: 'w-5 h-5',
-    lg: 'w-7 h-7',
-    xl: 'w-9 h-9',
+    sm: 'w-7 h-7',
+    md: 'w-9 h-9',
+    lg: 'w-11 h-11',
+    xl: 'w-14 h-14',
   };
 
   const textSizes = {
@@ -24,18 +25,19 @@ const Logo = ({ size = 'md', variant = 'dark', className = '' }) => {
 
   return (
     <div className={`ss-logo ${className}`}>
-      {/* icon container */}
-      <div className="ss-logo__icon">
-        <Bus className={iconSizes[size]} />
-        <Sparkles className="ss-logo__spark" aria-hidden="true" />
-      </div>
+      {/* Brand Emblem */}
+      <BrandIcon className={iconSizes[size]} />
 
-      {/* wordmark */}
+      {/* Wordmark */}
       <div className="ss-logo__wordmark">
-        <span className={`ss-logo__name ${textSizes[size]} ${variant === 'light' ? 'ss-logo__name--light' : ''}`}>
+        <span className={`ss-logo__name font-black ${textSizes[size]} ${variant === 'light' ? 'ss-logo__name--light' : ''}`}>
           SMART<span className="ss-logo__accent">SEAT</span>
         </span>
-        <span className="ss-logo__sub">SMART MOBILITY</span>
+        {showTagline && (
+          <span className="ss-logo__sub">
+            BOOK · TRACK · TRAVEL
+          </span>
+        )}
       </div>
     </div>
   );
